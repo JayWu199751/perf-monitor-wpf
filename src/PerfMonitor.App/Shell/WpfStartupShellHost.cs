@@ -4,7 +4,9 @@ using DrawingIcon = System.Drawing.Icon;
 using Forms = System.Windows.Forms;
 using PerfMonitor.Core.Shell;
 using PerfMonitor.Core.Metrics;
+using PerfMonitor.Core.Settings;
 using PerfMonitor.Windows.Metrics;
+using PerfMonitor.Windows.Settings;
 using WpfApplication = System.Windows.Application;
 using WpfContextMenu = System.Windows.Controls.ContextMenu;
 using WpfMenuItem = System.Windows.Controls.MenuItem;
@@ -20,6 +22,9 @@ internal sealed class WpfStartupShellHost : IStartupShellHost, IDisposable
     private readonly PerformanceBarViewModel _performanceBarViewModel = new();
     private readonly WindowsSystemMetricsSource _systemMetricsSource = new();
     private readonly WindowsSlowMetricsSource _slowMetricsSource = new();
+    private readonly ISettingsStore _settingsStore;
+    private PerformanceSettings _currentSettings = PerformanceSettings.Default;
+    private Func<SettingsPatch, PerformanceSettings>? _updateSettings;
     private PerformanceBarWindow? _performanceBar;
     private SettingsWindow? _settingsWindow;
     private Forms.NotifyIcon? _trayIcon;
@@ -27,9 +32,10 @@ internal sealed class WpfStartupShellHost : IStartupShellHost, IDisposable
     private bool _shutdownRequested;
     private volatile bool _disposed;
 
-    public WpfStartupShellHost(WpfApplication application)
+    public WpfStartupShellHost(WpfApplication application, ISettingsStore settingsStore)
     {
         _application = application;
+        _settingsStore = settingsStore;
     }
 
     public event EventHandler? PerformanceBarRightClickRequested;
@@ -51,6 +57,8 @@ internal sealed class WpfStartupShellHost : IStartupShellHost, IDisposable
     public ISystemMetricsSource? SystemMetricsSource => _systemMetricsSource;
 
     public ISlowMetricsSource? SlowMetricsSource => _slowMetricsSource;
+
+    public ISettingsStore? SettingsStore => _settingsStore;
 
     public void ShowPerformanceBar(bool activate)
     {
@@ -134,12 +142,28 @@ internal sealed class WpfStartupShellHost : IStartupShellHost, IDisposable
     {
         if (_settingsWindow is null)
         {
-            _settingsWindow = new SettingsWindow();
+            var updateSettings = _updateSettings
+                ?? throw new InvalidOperationException("设置窗必须使用控制器提供的设置更新入口。");
+            _settingsWindow = new SettingsWindow(
+                _currentSettings,
+                updateSettings,
+                _settingsStore.RecoveredInvalidSettingsOnLastLoad);
             _settingsWindow.Closing += OnSettingsWindowClosing;
         }
 
         _settingsWindow.Show();
         _settingsWindow.Activate();
+    }
+
+    public void ShowSettingsWindow(
+        PerformanceSettings settings,
+        Func<SettingsPatch, PerformanceSettings> updateSettings,
+        bool recoveredInvalidSettings)
+    {
+        _currentSettings = settings;
+        _updateSettings = updateSettings;
+        _settingsWindow?.ApplySettings(settings, recoveredInvalidSettings);
+        ShowSettingsWindow();
     }
 
     public void HideSettingsWindow()
@@ -149,6 +173,14 @@ internal sealed class WpfStartupShellHost : IStartupShellHost, IDisposable
 
     public void SetMetricGeneration(long generation) =>
         _performanceBarViewModel.SetMetricGeneration(generation);
+
+    public void ApplySettings(PerformanceSettings settings)
+    {
+        _currentSettings = settings;
+        var resetWidth = _performanceBarViewModel.ApplySettings(settings);
+        _performanceBar?.RefreshNaturalWidth(resetWidth);
+        _settingsWindow?.ApplySettings(settings, _settingsStore.RecoveredInvalidSettingsOnLastLoad);
+    }
 
     public void UpdatePerformanceMetrics(PerformanceMetricsSnapshot snapshot)
     {
@@ -165,6 +197,7 @@ internal sealed class WpfStartupShellHost : IStartupShellHost, IDisposable
                 if (!_disposed && !dispatcher.HasShutdownStarted && !dispatcher.HasShutdownFinished)
                 {
                     _performanceBarViewModel.Apply(snapshot);
+                    _performanceBar?.RefreshNaturalWidth();
                 }
             }));
         }
@@ -205,6 +238,7 @@ internal sealed class WpfStartupShellHost : IStartupShellHost, IDisposable
         _sharedContextMenu.IsOpen = false;
         _sharedContextMenu.Items.Clear();
         DisposeTrayIcon();
+        _performanceBarViewModel.Dispose();
     }
 
     private void EnsurePerformanceBar()

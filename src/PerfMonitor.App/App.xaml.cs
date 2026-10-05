@@ -1,6 +1,7 @@
 using PerfMonitor.App.Shell;
 using PerfMonitor.Core.Shell;
 using PerfMonitor.Windows.Elevation;
+using PerfMonitor.Windows.Settings;
 using WpfApplication = System.Windows.Application;
 using System.Windows;
 using System.Diagnostics;
@@ -49,7 +50,7 @@ public partial class App : WpfApplication
 #endif
 
         _singleInstance = WindowsSingleInstanceCoordinator.Acquire();
-        _shellHost = new WpfStartupShellHost(this);
+        _shellHost = new WpfStartupShellHost(this, new WindowsSettingsStore(WindowsSettingsStore.GetDefaultPath()));
         _shellController = new StartupShellController(_shellHost);
 
         var decision = _shellController.Start(new StartupAccessContext(

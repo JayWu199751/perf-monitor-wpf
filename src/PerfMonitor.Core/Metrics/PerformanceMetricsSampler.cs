@@ -53,7 +53,7 @@ internal sealed class PerformanceMetricsSampler : IDisposable
     private readonly SemaphoreSlim _samplingGate = new(1, 1);
     private readonly ISystemMetricsSource _source;
     private readonly Action<PerformanceMetricsSnapshot> _publish;
-    private readonly int _fastRefreshMilliseconds;
+    private int _fastRefreshMilliseconds;
     private CancellationTokenSource? _activeGeneration;
     private long _generation;
     private bool _disposed;
@@ -79,6 +79,22 @@ internal sealed class PerformanceMetricsSampler : IDisposable
     }
 
     public int FastRefreshMilliseconds => _fastRefreshMilliseconds;
+
+    public void SetFastRefreshMilliseconds(int milliseconds)
+    {
+        if (!AllowedRefreshIntervals.Contains(milliseconds))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(milliseconds),
+                "快通道刷新间隔只能是 1000、2000 或 5000 毫秒。");
+        }
+
+        lock (_sync)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            _fastRefreshMilliseconds = milliseconds;
+        }
+    }
 
     public long Start(Action<long> setGeneration)
     {
@@ -190,7 +206,13 @@ internal sealed class PerformanceMetricsSampler : IDisposable
                     _samplingGate.Release();
                 }
 
-                await Task.Delay(_fastRefreshMilliseconds, token).ConfigureAwait(false);
+                int refreshMilliseconds;
+                lock (_sync)
+                {
+                    refreshMilliseconds = _fastRefreshMilliseconds;
+                }
+
+                await Task.Delay(refreshMilliseconds, token).ConfigureAwait(false);
             }
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
