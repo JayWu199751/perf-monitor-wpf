@@ -23,3 +23,9 @@
 - `dotnet build PerfMonitor.sln --no-restore --verbosity minimal`：成功，0 警告、0 错误。
 - 尚未在真实性能条窗口中进行持续上传/下载、TUN/Hyper-V 并存或拔插/重置网卡的桌面验收；Core 算术使用替身输入，Windows 测试验证本机 API 结构读取而非速率真实性。复验步骤：运行应用并产生可控双向流量，确认网络段方向、单位和一位小数；在物理网卡与 TUN/Hyper-V 同时启用时观察是否只采用一行且没有重复累加，再停用物理候选确认回退行为。
 - 集成审查后为基线字典增加了成功接口表代际清理：每次完整读取后只保留当前 Up 且非 loopback 的 LUID，介质筛选变化仍更新并保留基线；空完整表会清除全部基线，读取缺失则不清基线。新增 Controller 合同回归测试先以旧值 2.0 MB/s 失败，再以重现接口的 0 MB/s 新基线通过。修正后复跑：Core.Tests 20/20、Windows.Tests 1/1，解决方案构建 0 警告、0 错误。
+
+### 2026-10-05 同步集成分支
+
+- 已同步 `codex/wpf-rewrite-integration` 的 `3978b8f`；合并时保留事项03提权/单实例接线、事项04 CPU 多处理器组聚合与亲和性恢复，以及事项05网络计数读取、差分字段和回归测试。性能条所有只读 `Run.Text` 绑定均显式设为 `Mode=OneWay`。
+- 同步后 `dotnet test PerfMonitor.sln --no-restore --verbosity minimal`：Core.Tests 31/31、Windows.Tests 3/3 通过。`dotnet build PerfMonitor.sln --no-restore --verbosity minimal`：成功，0 警告、0 错误；`git diff --check` 通过。
+- 本机 Windows 集成测试实际读取活动处理器组、恢复调用线程亲和性，并读取网卡接口表及单调时间戳。未验证持续真实网络流量、TUN/Hyper-V 同时启用时的用户可见速率与界面桌面体验；按上文复验步骤执行后再补人工证据。
