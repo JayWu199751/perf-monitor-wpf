@@ -12,10 +12,18 @@ public enum ShellMenuOrigin
 public enum ShellMenuAction
 {
     OpenSettings,
-    Exit
+    Exit,
+    TogglePerformanceBarVisibility,
+    ToggleCenterInTaskbarRow,
+    ToggleTransparentDisplay,
+    Separator
 }
 
-public sealed record ShellMenuItem(ShellMenuAction Action, string Label);
+public sealed record ShellMenuItem(
+    ShellMenuAction Action,
+    string Label,
+    bool IsCheckable = false,
+    bool IsChecked = false);
 
 public sealed record StartupShellState(
     bool IsRunning,
@@ -85,12 +93,6 @@ public interface IStartupShellHost
 
 public sealed class StartupShellController : IDisposable
 {
-    private static readonly IReadOnlyList<ShellMenuItem> BasicMenuItems = Array.AsReadOnly(
-    [
-        new ShellMenuItem(ShellMenuAction.OpenSettings, "打开设置"),
-        new ShellMenuItem(ShellMenuAction.Exit, "退出")
-    ]);
-
     private readonly IStartupShellHost _host;
     private readonly ISettingsStore? _settingsStore;
     private readonly PerformanceMetricsSampler? _metricsSampler;
@@ -195,6 +197,9 @@ public sealed class StartupShellController : IDisposable
 
         switch (action)
         {
+            case ShellMenuAction.TogglePerformanceBarVisibility:
+                SetPerformanceBarVisibility(!State.IsPerformanceBarVisible, activate: !State.IsPerformanceBarVisible);
+                break;
             case ShellMenuAction.OpenSettings:
                 _host.ShowSettingsWindow(Settings, UpdateSettings, RecoveredInvalidSettingsOnStartup);
                 State = State with
@@ -202,6 +207,12 @@ public sealed class StartupShellController : IDisposable
                     IsSettingsWindowCreated = true,
                     IsSettingsWindowVisible = true
                 };
+                break;
+            case ShellMenuAction.ToggleCenterInTaskbarRow:
+                UpdateSettings(new SettingsPatch { CenterInTaskbarRow = !Settings.CenterInTaskbarRow });
+                break;
+            case ShellMenuAction.ToggleTransparentDisplay:
+                UpdateSettings(new SettingsPatch { TransparentDisplay = !Settings.TransparentDisplay });
                 break;
             case ShellMenuAction.Exit:
                 StopMetricSampling();
@@ -287,8 +298,12 @@ public sealed class StartupShellController : IDisposable
             return;
         }
 
-        var visible = !State.IsPerformanceBarVisible;
-        _host.SetPerformanceBarVisible(visible, activate: visible);
+        SetPerformanceBarVisibility(!State.IsPerformanceBarVisible, activate: !State.IsPerformanceBarVisible);
+    }
+
+    private void SetPerformanceBarVisibility(bool visible, bool activate)
+    {
+        _host.SetPerformanceBarVisible(visible, activate: activate);
         State = State with { IsPerformanceBarVisible = visible };
         if (visible)
         {
@@ -312,7 +327,28 @@ public sealed class StartupShellController : IDisposable
             return;
         }
 
-        _host.ShowContextMenu(origin, BasicMenuItems, SelectMenuItem);
+        var items = Array.AsReadOnly(
+        [
+            new ShellMenuItem(
+                ShellMenuAction.TogglePerformanceBarVisibility,
+                "显示/隐藏小窗",
+                IsCheckable: true,
+                IsChecked: State.IsPerformanceBarVisible),
+            new ShellMenuItem(ShellMenuAction.OpenSettings, "打开设置"),
+            new ShellMenuItem(
+                ShellMenuAction.ToggleCenterInTaskbarRow,
+                "任务栏内水平居中",
+                IsCheckable: true,
+                IsChecked: Settings.CenterInTaskbarRow),
+            new ShellMenuItem(
+                ShellMenuAction.ToggleTransparentDisplay,
+                "透明显示",
+                IsCheckable: true,
+                IsChecked: Settings.TransparentDisplay),
+            new ShellMenuItem(ShellMenuAction.Separator, string.Empty),
+            new ShellMenuItem(ShellMenuAction.Exit, "退出")
+        ]);
+        _host.ShowContextMenu(origin, items, SelectMenuItem);
     }
 
     private void StartMetricSampling()

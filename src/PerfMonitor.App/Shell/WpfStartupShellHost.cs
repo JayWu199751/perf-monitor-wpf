@@ -128,7 +128,18 @@ internal sealed class WpfStartupShellHost : IStartupShellHost, IDisposable
 
         foreach (var item in items)
         {
-            var menuItem = new WpfMenuItem { Header = item.Label };
+            if (item.Action == ShellMenuAction.Separator)
+            {
+                _sharedContextMenu.Items.Add(new System.Windows.Controls.Separator());
+                continue;
+            }
+
+            var menuItem = new WpfMenuItem
+            {
+                Header = item.Label,
+                IsCheckable = item.IsCheckable,
+                IsChecked = item.IsChecked
+            };
             menuItem.Click += (_, _) => selectItem(item.Action);
             _sharedContextMenu.Items.Add(menuItem);
         }

@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="性能小窗"
-        FontFamily="Segoe UI, Microsoft YaHei UI"
+        FontFamily="SF Pro Text, Segoe UI Variable Text, Segoe UI, Microsoft YaHei, sans-serif"
         WindowStyle="None"
         ResizeMode="NoResize"
         ShowInTaskbar="False"
@@ -13,80 +13,108 @@
         SizeToContent="Height"
         MinWidth="64"
         Width="64"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True"
         WindowStartupLocation="Manual"
         Left="24"
         Top="24"
         PreviewMouseRightButtonUp="OnPreviewMouseRightButtonUp">
     <Border x:Name="Card"
-            Padding="8,6"
+            Padding="{Binding CardPadding}"
             Background="{Binding BackgroundBrush}"
             BorderBrush="{Binding BorderBrush}"
-            BorderThickness="1"
+            BorderThickness="{Binding BorderThickness}"
             CornerRadius="{Binding CornerRadius}">
         <StackPanel Orientation="Horizontal"
                     VerticalAlignment="Center"
                     TextOptions.TextFormattingMode="Display">
             <StackPanel Orientation="Horizontal" Visibility="{Binding CpuVisibility}">
-                <TextBlock Text="CPU" Foreground="{Binding SecondaryBrush}" FontSize="{Binding LabelFontSize}"
-                           Margin="0" VerticalAlignment="Center" />
-                <TextBlock Text="{Binding CpuPercentageText, Mode=OneWay}" Foreground="{Binding ForegroundBrush}"
-                           FontSize="{Binding FontSize}" FontFamily="Cascadia Mono, Consolas, Microsoft YaHei UI"
-                           FontWeight="SemiBold" Margin="{Binding LabelGap}" VerticalAlignment="Center" />
-                <TextBlock Text="{Binding CpuTemperatureText, Mode=OneWay}" Foreground="{Binding SecondaryBrush}"
-                           FontSize="{Binding LabelFontSize}" FontFamily="Cascadia Mono, Consolas, Microsoft YaHei UI"
-                           Margin="{Binding ReadingGap}" VerticalAlignment="Center" />
+                <TextBlock Text="CPU" Foreground="{Binding LabelBrush}" FontSize="{Binding LabelFontSize}"
+                           FontWeight="SemiBold" VerticalAlignment="Center" />
+                <TextBlock Text="{Binding CpuPercentageText, Mode=OneWay}"
+                           Foreground="{Binding CpuPercentageBrush}"
+                           FontSize="{Binding FontSize}" FontWeight="SemiBold"
+                           Typography.NumeralAlignment="Tabular"
+                           Margin="{Binding LabelGap}" VerticalAlignment="Center" />
+                <TextBlock Foreground="{Binding CpuTemperatureBrush}"
+                           FontSize="{Binding SecondaryFontSize}" FontWeight="Medium"
+                           Typography.NumeralAlignment="Tabular"
+                           Margin="{Binding ReadingGap}" VerticalAlignment="Center">
+                    <Run Text="{Binding CpuTemperatureValueText, Mode=OneWay}" />
+                    <Run Text="{Binding CpuTemperatureUnitText, Mode=OneWay}"
+                         FontSize="{Binding SecondaryUnitFontSize}" BaselineAlignment="Superscript" />
+                </TextBlock>
             </StackPanel>
             <Border Width="1" Height="{Binding DividerHeight}" Background="{Binding DividerBrush}"
                     Margin="{Binding DividerGap}" VerticalAlignment="Center" Visibility="{Binding CpuDividerVisibility}" />
 
             <StackPanel Orientation="Horizontal" Visibility="{Binding MemoryVisibility}">
-                <TextBlock Text="内存" Foreground="{Binding SecondaryBrush}" FontSize="{Binding LabelFontSize}"
-                           VerticalAlignment="Center" />
-                <TextBlock Text="{Binding MemoryPercentageText, Mode=OneWay}" Foreground="{Binding ForegroundBrush}"
-                           FontSize="{Binding FontSize}" FontFamily="Cascadia Mono, Consolas, Microsoft YaHei UI"
-                           FontWeight="SemiBold" Margin="{Binding LabelGap}" VerticalAlignment="Center" />
+                <TextBlock Text="内存" Foreground="{Binding LabelBrush}" FontSize="{Binding LabelFontSize}"
+                           FontWeight="SemiBold" VerticalAlignment="Center" />
+                <TextBlock Text="{Binding MemoryPercentageText, Mode=OneWay}"
+                           Foreground="{Binding MemoryPercentageBrush}"
+                           FontSize="{Binding FontSize}" FontWeight="SemiBold"
+                           Typography.NumeralAlignment="Tabular"
+                           Margin="{Binding LabelGap}" VerticalAlignment="Center" />
             </StackPanel>
             <Border Width="1" Height="{Binding DividerHeight}" Background="{Binding DividerBrush}"
                     Margin="{Binding DividerGap}" VerticalAlignment="Center" Visibility="{Binding MemoryDividerVisibility}" />
 
             <StackPanel Orientation="Horizontal" Visibility="{Binding GpuVisibility}">
-                <TextBlock Text="GPU" Foreground="{Binding SecondaryBrush}" FontSize="{Binding LabelFontSize}"
-                           VerticalAlignment="Center" />
-                <TextBlock Text="{Binding GpuPercentageText, Mode=OneWay}" Foreground="{Binding ForegroundBrush}"
-                           FontSize="{Binding FontSize}" FontFamily="Cascadia Mono, Consolas, Microsoft YaHei UI"
-                           FontWeight="SemiBold" Margin="{Binding LabelGap}" VerticalAlignment="Center" />
-                <TextBlock Text="显存" Foreground="{Binding SecondaryBrush}" FontSize="{Binding LabelFontSize}"
+                <TextBlock Text="GPU" Foreground="{Binding LabelBrush}" FontSize="{Binding LabelFontSize}"
+                           FontWeight="SemiBold" VerticalAlignment="Center" />
+                <TextBlock Text="{Binding GpuPercentageText, Mode=OneWay}"
+                           Foreground="{Binding GpuPercentageBrush}"
+                           FontSize="{Binding FontSize}" FontWeight="SemiBold"
+                           Typography.NumeralAlignment="Tabular"
+                           Margin="{Binding LabelGap}" VerticalAlignment="Center" />
+                <TextBlock Text="显存" Foreground="{Binding LabelBrush}" FontSize="{Binding LabelFontSize}"
                            Margin="{Binding ReadingGap}" VerticalAlignment="Center" />
-                <TextBlock Text="{Binding GpuMemoryPercentageText, Mode=OneWay}" Foreground="{Binding ForegroundBrush}"
-                           FontSize="{Binding FontSize}" FontFamily="Cascadia Mono, Consolas, Microsoft YaHei UI"
-                           FontWeight="SemiBold" Margin="{Binding LabelGap}" VerticalAlignment="Center" />
-                <TextBlock Text="{Binding GpuTemperatureText, Mode=OneWay}" Foreground="{Binding SecondaryBrush}"
-                           FontSize="{Binding LabelFontSize}" FontFamily="Cascadia Mono, Consolas, Microsoft YaHei UI"
-                           Margin="{Binding ReadingGap}" VerticalAlignment="Center" />
+                <TextBlock Text="{Binding GpuMemoryPercentageText, Mode=OneWay}"
+                           Foreground="{Binding GpuMemoryPercentageBrush}"
+                           FontSize="{Binding FontSize}" FontWeight="SemiBold"
+                           Typography.NumeralAlignment="Tabular"
+                           Margin="{Binding LabelGap}" VerticalAlignment="Center" />
+                <TextBlock Foreground="{Binding GpuTemperatureBrush}"
+                           FontSize="{Binding SecondaryFontSize}" FontWeight="Medium"
+                           Typography.NumeralAlignment="Tabular"
+                           Margin="{Binding ReadingGap}" VerticalAlignment="Center">
+                    <Run Text="{Binding GpuTemperatureValueText, Mode=OneWay}" />
+                    <Run Text="{Binding GpuTemperatureUnitText, Mode=OneWay}"
+                         FontSize="{Binding SecondaryUnitFontSize}" BaselineAlignment="Superscript" />
+                </TextBlock>
             </StackPanel>
             <Border Width="1" Height="{Binding DividerHeight}" Background="{Binding DividerBrush}"
                     Margin="{Binding DividerGap}" VerticalAlignment="Center" Visibility="{Binding GpuDividerVisibility}" />
 
             <StackPanel Orientation="Horizontal" Visibility="{Binding NetworkVisibility}">
-                <TextBlock Text="↓" Foreground="#FF73B7FF" FontSize="{Binding FontSize}" VerticalAlignment="Center" />
-                <TextBlock Text="{Binding NetworkDownloadSpeedText, Mode=OneWay}" Foreground="{Binding ForegroundBrush}"
-                           FontSize="{Binding FontSize}" FontFamily="Cascadia Mono, Consolas, Microsoft YaHei UI"
-                           FontWeight="SemiBold" Margin="{Binding ReadingGap}" VerticalAlignment="Center" />
-                <TextBlock Text="MB/s" Foreground="{Binding SecondaryBrush}" FontSize="{Binding LabelFontSize}"
-                           Margin="{Binding LabelGap}" VerticalAlignment="Center" />
-                <TextBlock Text="↑" Foreground="#FF73B7FF" FontSize="{Binding FontSize}"
-                           Margin="{Binding ReadingGap}" VerticalAlignment="Center" />
-                <TextBlock Text="{Binding NetworkUploadSpeedText, Mode=OneWay}" Foreground="{Binding ForegroundBrush}"
-                           FontSize="{Binding FontSize}" FontFamily="Cascadia Mono, Consolas, Microsoft YaHei UI"
-                           FontWeight="SemiBold" Margin="{Binding ReadingGap}" VerticalAlignment="Center" />
-                <TextBlock Text="MB/s" Foreground="{Binding SecondaryBrush}" FontSize="{Binding LabelFontSize}"
-                           Margin="{Binding LabelGap}" VerticalAlignment="Center" />
+                <TextBlock Text="网络" Foreground="{Binding LabelBrush}" FontSize="{Binding LabelFontSize}"
+                           FontWeight="SemiBold" VerticalAlignment="Center" />
+                <TextBlock Text="↓" Foreground="{Binding NetworkDownloadArrowBrush}" FontSize="{Binding FontSize}"
+                           FontWeight="Bold" Margin="{Binding LabelGap}" VerticalAlignment="Center" />
+                <TextBlock Text="{Binding NetworkDownloadSpeedText, Mode=OneWay}"
+                           Foreground="{Binding NetworkDownloadBrush}"
+                           FontSize="{Binding FontSize}" FontWeight="SemiBold"
+                           Typography.NumeralAlignment="Tabular" VerticalAlignment="Center" />
+                <TextBlock Text="MB/s" Foreground="{Binding NetworkDownloadUnitBrush}"
+                           FontSize="{Binding UnitFontSize}" FontWeight="SemiBold"
+                           Margin="1,0,0,0" VerticalAlignment="Center" />
+                <TextBlock Text="↑" Foreground="{Binding NetworkUploadArrowBrush}" FontSize="{Binding FontSize}"
+                           FontWeight="Bold" Margin="{Binding ReadingGap}" VerticalAlignment="Center" />
+                <TextBlock Text="{Binding NetworkUploadSpeedText, Mode=OneWay}"
+                           Foreground="{Binding NetworkUploadBrush}"
+                           FontSize="{Binding FontSize}" FontWeight="SemiBold"
+                           Typography.NumeralAlignment="Tabular" VerticalAlignment="Center" />
+                <TextBlock Text="MB/s" Foreground="{Binding NetworkUploadUnitBrush}"
+                           FontSize="{Binding UnitFontSize}" FontWeight="SemiBold"
+                           Margin="1,0,0,0" VerticalAlignment="Center" />
             </StackPanel>
             <Border Width="1" Height="{Binding DividerHeight}" Background="{Binding DividerBrush}"
                     Margin="{Binding DividerGap}" VerticalAlignment="Center" Visibility="{Binding NetworkDividerVisibility}" />
 
-            <TextBlock Text="{Binding TimeText, Mode=OneWay}" Foreground="{Binding ForegroundBrush}"
-                       FontSize="{Binding FontSize}" FontFamily="Cascadia Mono, Consolas, Microsoft YaHei UI"
+            <TextBlock Text="{Binding TimeText, Mode=OneWay}" Foreground="{Binding SecondaryBrush}"
+                       FontSize="{Binding FontSize}" FontWeight="SemiBold"
+                       Typography.NumeralAlignment="Tabular"
                        Visibility="{Binding TimeVisibility}" VerticalAlignment="Center" />
         </StackPanel>
     </Border>

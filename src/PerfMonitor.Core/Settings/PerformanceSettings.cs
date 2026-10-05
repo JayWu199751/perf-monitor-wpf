@@ -137,6 +137,8 @@ public sealed record PerformanceSettings
             SlowRefreshMilliseconds = patch.SlowRefreshMilliseconds ?? SlowRefreshMilliseconds,
             Autostart = patch.Autostart ?? Autostart,
             AutoHideOnFullscreen = patch.AutoHideOnFullscreen ?? AutoHideOnFullscreen,
+            CenterInTaskbarRow = patch.CenterInTaskbarRow ?? CenterInTaskbarRow,
+            TransparentDisplay = patch.TransparentDisplay ?? TransparentDisplay,
             Opacity = patch.Opacity is { } opacity ? SnapOpacity(opacity) : Opacity,
             FontSize = patch.FontSize ?? FontSize,
             Theme = patch.Theme ?? Theme
@@ -185,6 +187,10 @@ public sealed record SettingsPatch
     public bool? Autostart { get; init; }
 
     public bool? AutoHideOnFullscreen { get; init; }
+
+    public bool? CenterInTaskbarRow { get; init; }
+
+    public bool? TransparentDisplay { get; init; }
 
     public double? Opacity { get; init; }
 

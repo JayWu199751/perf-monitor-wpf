@@ -371,8 +371,8 @@ public sealed class StartupShellContractTests
         Assert.Equal((true, true), host.VisibilityChanges[^1]);
     }
 
-    [Fact(DisplayName = "托盘右键显示打开设置和退出菜单")]
-    public void Tray_right_click_shows_the_basic_menu()
+    [Fact(DisplayName = "托盘和性能条右键显示共享菜单")]
+    public void Tray_and_performance_bar_right_click_show_the_shared_menu()
     {
         var host = new RecordingStartupShellHost();
         var shell = new StartupShellController(host);
@@ -387,7 +387,21 @@ public sealed class StartupShellContractTests
         Assert.Equal(host.ContextMenus[0].Items, host.ContextMenus[1].Items);
         Assert.Equal(
         [
+            new ShellMenuItem(
+                ShellMenuAction.TogglePerformanceBarVisibility,
+                "显示/隐藏小窗",
+                IsCheckable: true,
+                IsChecked: true),
             new ShellMenuItem(ShellMenuAction.OpenSettings, "打开设置"),
+            new ShellMenuItem(
+                ShellMenuAction.ToggleCenterInTaskbarRow,
+                "任务栏内水平居中",
+                IsCheckable: true),
+            new ShellMenuItem(
+                ShellMenuAction.ToggleTransparentDisplay,
+                "透明显示",
+                IsCheckable: true),
+            new ShellMenuItem(ShellMenuAction.Separator, string.Empty),
             new ShellMenuItem(ShellMenuAction.Exit, "退出")
         ], host.ContextMenus[0].Items);
     }

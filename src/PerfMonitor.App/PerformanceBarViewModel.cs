@@ -15,12 +15,14 @@ namespace PerfMonitor.App;
 public sealed class PerformanceBarViewModel : INotifyPropertyChanged
 {
     private long _metricGeneration;
-    private string _cpuPercentageText = "--%";
-    private string _memoryPercentageText = "--%";
-    private string _gpuPercentageText = "--%";
-    private string _gpuMemoryPercentageText = "--%";
-    private string _gpuTemperatureText = "--°";
-    private string _cpuTemperatureText = "--°";
+    private string _cpuPercentageText = "--";
+    private string _memoryPercentageText = "--";
+    private string _gpuPercentageText = "--";
+    private string _gpuMemoryPercentageText = "--";
+    private string _gpuTemperatureValueText = "--";
+    private string _cpuTemperatureValueText = "--";
+    private string _gpuTemperatureUnitText = string.Empty;
+    private string _cpuTemperatureUnitText = string.Empty;
     private string _networkDownloadSpeedText = "--";
     private string _networkUploadSpeedText = "--";
     private string _timeText = DateTime.Now.ToString("HH:mm:ss", CultureInfo.InvariantCulture);
@@ -35,11 +37,34 @@ public sealed class PerformanceBarViewModel : INotifyPropertyChanged
     private Visibility _memoryDividerVisibility = Visibility.Visible;
     private Visibility _gpuDividerVisibility = Visibility.Visible;
     private Visibility _networkDividerVisibility = Visibility.Visible;
-    private Brush _backgroundBrush = CreateBrush(Color.FromArgb(0xE5, 0x1F, 0x22, 0x28));
-    private Brush _foregroundBrush = CreateBrush(Color.FromRgb(0xF4, 0xF6, 0xF8));
-    private Brush _secondaryBrush = CreateBrush(Color.FromRgb(0xB7, 0xC0, 0xCA));
-    private Brush _borderBrush = CreateBrush(Color.FromArgb(0x40, 0x55, 0x60, 0x70));
-    private Brush _dividerBrush = CreateBrush(Color.FromArgb(0x70, 0xA4, 0xAE, 0xB8));
+    private bool _hasCpuPercentage;
+    private bool _hasMemoryPercentage;
+    private bool _hasGpuPercentage;
+    private bool _hasGpuMemoryPercentage;
+    private bool _hasGpuTemperature;
+    private bool _hasCpuTemperature;
+    private bool _hasNetworkDownload;
+    private bool _hasNetworkUpload;
+    private Brush _backgroundBrush = CreateBrush(Color.FromArgb(0xB8, 0x1D, 0x1D, 0x1F));
+    private Brush _foregroundBrush = CreateBrush(Color.FromRgb(0xF5, 0xF5, 0xF7));
+    private Brush _secondaryBrush = CreateBrush(Color.FromArgb(0xAD, 0xF5, 0xF5, 0xF7));
+    private Brush _labelBrush = CreateBrush(Color.FromArgb(0x80, 0xF5, 0xF5, 0xF7));
+    private Brush _missingBrush = CreateBrush(Color.FromArgb(0x52, 0xF5, 0xF5, 0xF7));
+    private Brush _accentBrush = CreateBrush(Color.FromRgb(0x0A, 0x84, 0xFF));
+    private Brush _borderBrush = CreateBrush(Color.FromArgb(0x24, 0xFF, 0xFF, 0xFF));
+    private Brush _dividerBrush = CreateBrush(Color.FromArgb(0x1F, 0xFF, 0xFF, 0xFF));
+    private Brush _cpuPercentageBrush = CreateBrush(Color.FromArgb(0x52, 0xF5, 0xF5, 0xF7));
+    private Brush _memoryPercentageBrush = CreateBrush(Color.FromArgb(0x52, 0xF5, 0xF5, 0xF7));
+    private Brush _gpuPercentageBrush = CreateBrush(Color.FromArgb(0x52, 0xF5, 0xF5, 0xF7));
+    private Brush _gpuMemoryPercentageBrush = CreateBrush(Color.FromArgb(0x52, 0xF5, 0xF5, 0xF7));
+    private Brush _gpuTemperatureBrush = CreateBrush(Color.FromArgb(0x52, 0xF5, 0xF5, 0xF7));
+    private Brush _cpuTemperatureBrush = CreateBrush(Color.FromArgb(0x52, 0xF5, 0xF5, 0xF7));
+    private Brush _networkDownloadBrush = CreateBrush(Color.FromArgb(0x52, 0xF5, 0xF5, 0xF7));
+    private Brush _networkUploadBrush = CreateBrush(Color.FromArgb(0x52, 0xF5, 0xF5, 0xF7));
+    private Brush _networkDownloadArrowBrush = CreateBrush(Color.FromArgb(0x52, 0xF5, 0xF5, 0xF7));
+    private Brush _networkUploadArrowBrush = CreateBrush(Color.FromArgb(0x52, 0xF5, 0xF5, 0xF7));
+    private Brush _networkDownloadUnitBrush = CreateBrush(Color.FromArgb(0x52, 0xF5, 0xF5, 0xF7));
+    private Brush _networkUploadUnitBrush = CreateBrush(Color.FromArgb(0x52, 0xF5, 0xF5, 0xF7));
 
     public PerformanceBarViewModel()
     {
@@ -75,7 +100,13 @@ public sealed class PerformanceBarViewModel : INotifyPropertyChanged
 
     public double FontSize => _settings.FontSize;
 
-    public double LabelFontSize => _settings.FontSize * 0.78;
+    public double LabelFontSize => Math.Clamp(_settings.FontSize * 0.82, 9, 12);
+
+    public double SecondaryFontSize => Math.Clamp(_settings.FontSize * 0.90, 9, 14);
+
+    public double UnitFontSize => Math.Clamp(_settings.FontSize * 0.82, 8, 12);
+
+    public double SecondaryUnitFontSize => SecondaryFontSize * 0.92;
 
     public CornerRadius CornerRadius => new(_settings.FontSize * 0.8);
 
@@ -87,11 +118,45 @@ public sealed class PerformanceBarViewModel : INotifyPropertyChanged
 
     public double DividerHeight => _settings.FontSize;
 
+    public Thickness CardPadding => _settings.TransparentDisplay
+        ? new Thickness(8, 6, 8, 6)
+        : new Thickness(7, 5, 7, 5);
+
+    public Thickness BorderThickness => _settings.TransparentDisplay ? new Thickness(0) : new Thickness(1);
+
     public Brush BackgroundBrush { get => _backgroundBrush; private set => SetField(ref _backgroundBrush, value); }
 
     public Brush ForegroundBrush { get => _foregroundBrush; private set => SetField(ref _foregroundBrush, value); }
 
     public Brush SecondaryBrush { get => _secondaryBrush; private set => SetField(ref _secondaryBrush, value); }
+
+    public Brush LabelBrush { get => _labelBrush; private set => SetField(ref _labelBrush, value); }
+
+    public Brush MissingBrush { get => _missingBrush; private set => SetField(ref _missingBrush, value); }
+
+    public Brush CpuPercentageBrush { get => _cpuPercentageBrush; private set => SetField(ref _cpuPercentageBrush, value); }
+
+    public Brush MemoryPercentageBrush { get => _memoryPercentageBrush; private set => SetField(ref _memoryPercentageBrush, value); }
+
+    public Brush GpuPercentageBrush { get => _gpuPercentageBrush; private set => SetField(ref _gpuPercentageBrush, value); }
+
+    public Brush GpuMemoryPercentageBrush { get => _gpuMemoryPercentageBrush; private set => SetField(ref _gpuMemoryPercentageBrush, value); }
+
+    public Brush GpuTemperatureBrush { get => _gpuTemperatureBrush; private set => SetField(ref _gpuTemperatureBrush, value); }
+
+    public Brush CpuTemperatureBrush { get => _cpuTemperatureBrush; private set => SetField(ref _cpuTemperatureBrush, value); }
+
+    public Brush NetworkDownloadBrush { get => _networkDownloadBrush; private set => SetField(ref _networkDownloadBrush, value); }
+
+    public Brush NetworkUploadBrush { get => _networkUploadBrush; private set => SetField(ref _networkUploadBrush, value); }
+
+    public Brush NetworkDownloadArrowBrush { get => _networkDownloadArrowBrush; private set => SetField(ref _networkDownloadArrowBrush, value); }
+
+    public Brush NetworkUploadArrowBrush { get => _networkUploadArrowBrush; private set => SetField(ref _networkUploadArrowBrush, value); }
+
+    public Brush NetworkDownloadUnitBrush { get => _networkDownloadUnitBrush; private set => SetField(ref _networkDownloadUnitBrush, value); }
+
+    public Brush NetworkUploadUnitBrush { get => _networkUploadUnitBrush; private set => SetField(ref _networkUploadUnitBrush, value); }
 
     public Brush BorderBrush { get => _borderBrush; private set => SetField(ref _borderBrush, value); }
 
@@ -123,16 +188,28 @@ public sealed class PerformanceBarViewModel : INotifyPropertyChanged
         private set => SetField(ref _gpuMemoryPercentageText, value);
     }
 
-    public string GpuTemperatureText
+    public string GpuTemperatureValueText
     {
-        get => _gpuTemperatureText;
-        private set => SetField(ref _gpuTemperatureText, value);
+        get => _gpuTemperatureValueText;
+        private set => SetField(ref _gpuTemperatureValueText, value);
     }
 
-    public string CpuTemperatureText
+    public string CpuTemperatureValueText
     {
-        get => _cpuTemperatureText;
-        private set => SetField(ref _cpuTemperatureText, value);
+        get => _cpuTemperatureValueText;
+        private set => SetField(ref _cpuTemperatureValueText, value);
+    }
+
+    public string GpuTemperatureUnitText
+    {
+        get => _gpuTemperatureUnitText;
+        private set => SetField(ref _gpuTemperatureUnitText, value);
+    }
+
+    public string CpuTemperatureUnitText
+    {
+        get => _cpuTemperatureUnitText;
+        private set => SetField(ref _cpuTemperatureUnitText, value);
     }
 
     public string NetworkDownloadSpeedText
@@ -156,31 +233,49 @@ public sealed class PerformanceBarViewModel : INotifyPropertyChanged
             return;
         }
 
+        _hasCpuPercentage = snapshot.CpuPercentage.HasValue;
+        _hasMemoryPercentage = snapshot.MemoryPercentage.HasValue;
+        _hasGpuPercentage = snapshot.GpuPercentage.HasValue;
+        _hasGpuMemoryPercentage = snapshot.GpuMemoryPercentage.HasValue;
+        _hasGpuTemperature = snapshot.GpuTemperatureCelsius.HasValue;
+        _hasCpuTemperature = snapshot.CpuTemperatureCelsius.HasValue;
+        _hasNetworkDownload = snapshot.NetworkDownloadMegabytesPerSecond.HasValue;
+        _hasNetworkUpload = snapshot.NetworkUploadMegabytesPerSecond.HasValue;
         CpuPercentageText = FormatPercentage(snapshot.CpuPercentage);
         MemoryPercentageText = FormatPercentage(snapshot.MemoryPercentage);
         GpuPercentageText = FormatPercentage(snapshot.GpuPercentage);
         GpuMemoryPercentageText = FormatPercentage(snapshot.GpuMemoryPercentage);
-        GpuTemperatureText = FormatTemperature(snapshot.GpuTemperatureCelsius);
-        CpuTemperatureText = FormatTemperature(snapshot.CpuTemperatureCelsius);
+        GpuTemperatureValueText = FormatTemperatureValue(snapshot.GpuTemperatureCelsius);
+        CpuTemperatureValueText = FormatTemperatureValue(snapshot.CpuTemperatureCelsius);
+        GpuTemperatureUnitText = snapshot.GpuTemperatureCelsius.HasValue ? "°" : string.Empty;
+        CpuTemperatureUnitText = snapshot.CpuTemperatureCelsius.HasValue ? "°" : string.Empty;
         NetworkDownloadSpeedText = FormatNetworkSpeed(snapshot.NetworkDownloadMegabytesPerSecond);
         NetworkUploadSpeedText = FormatNetworkSpeed(snapshot.NetworkUploadMegabytesPerSecond);
+        UpdateReadingBrushes();
     }
 
     internal bool ApplySettings(PerformanceSettings settings)
     {
         ArgumentNullException.ThrowIfNull(settings);
         settings.Validate();
-        var layoutChanged = _settings.FontSize != settings.FontSize || _settings.Metrics != settings.Metrics;
+        var layoutChanged = _settings.FontSize != settings.FontSize
+            || _settings.Metrics != settings.Metrics
+            || _settings.TransparentDisplay != settings.TransparentDisplay;
         _settings = settings;
         UpdateSegmentVisibility();
         UpdateThemeBrushes();
         OnPropertyChanged(nameof(FontSize));
         OnPropertyChanged(nameof(LabelFontSize));
+        OnPropertyChanged(nameof(SecondaryFontSize));
+        OnPropertyChanged(nameof(UnitFontSize));
+        OnPropertyChanged(nameof(SecondaryUnitFontSize));
         OnPropertyChanged(nameof(CornerRadius));
         OnPropertyChanged(nameof(LabelGap));
         OnPropertyChanged(nameof(ReadingGap));
         OnPropertyChanged(nameof(DividerGap));
         OnPropertyChanged(nameof(DividerHeight));
+        OnPropertyChanged(nameof(CardPadding));
+        OnPropertyChanged(nameof(BorderThickness));
         _clockTimer.IsEnabled = settings.Metrics.Time;
         if (settings.Metrics.Time)
         {
@@ -229,15 +324,47 @@ public sealed class PerformanceBarViewModel : INotifyPropertyChanged
             _ => IsDarkSystemTheme()
         };
         var background = dark
-            ? Color.FromRgb(0x1F, 0x22, 0x28)
-            : Color.FromRgb(0xF4, 0xF6, 0xF8);
+            ? Color.FromRgb(0x1D, 0x1D, 0x1F)
+            : Color.FromRgb(0xFA, 0xFA, 0xFC);
         var alpha = _settings.TransparentDisplay ? (byte)0 : (byte)Math.Round(_settings.Opacity * byte.MaxValue);
         BackgroundBrush = CreateBrush(Color.FromArgb(alpha, background.R, background.G, background.B));
-        ForegroundBrush = CreateBrush(dark ? Color.FromRgb(0xF4, 0xF6, 0xF8) : Color.FromRgb(0x24, 0x2A, 0x31));
-        SecondaryBrush = CreateBrush(dark ? Color.FromRgb(0xB7, 0xC0, 0xCA) : Color.FromRgb(0x68, 0x72, 0x7D));
-        BorderBrush = CreateBrush(Color.FromArgb(_settings.TransparentDisplay ? (byte)0 : (byte)0x40, background.R, background.G, background.B));
-        var divider = dark ? Color.FromArgb(0x70, 0xA4, 0xAE, 0xB8) : Color.FromArgb(0x70, 0x68, 0x72, 0x7D);
+        ForegroundBrush = CreateBrush(dark ? Color.FromRgb(0xF5, 0xF5, 0xF7) : Color.FromRgb(0x1D, 0x1D, 0x1F));
+        SecondaryBrush = CreateBrush(dark
+            ? Color.FromArgb(0xAD, 0xF5, 0xF5, 0xF7)
+            : Color.FromArgb(0xA8, 0x1D, 0x1D, 0x1F));
+        LabelBrush = CreateBrush(dark
+            ? Color.FromArgb(0x80, 0xF5, 0xF5, 0xF7)
+            : Color.FromArgb(0x9E, 0x1D, 0x1D, 0x1F));
+        MissingBrush = CreateBrush(dark
+            ? Color.FromArgb(0x52, 0xF5, 0xF5, 0xF7)
+            : Color.FromArgb(0x4D, 0x1D, 0x1D, 0x1F));
+        _accentBrush = CreateBrush(dark ? Color.FromRgb(0x0A, 0x84, 0xFF) : Color.FromRgb(0x00, 0x71, 0xE3));
+        BorderBrush = CreateBrush(Color.FromArgb(
+            _settings.TransparentDisplay ? (byte)0 : dark ? (byte)0x24 : (byte)0x1F,
+            dark ? (byte)0xFF : (byte)0x00,
+            dark ? (byte)0xFF : (byte)0x00,
+            dark ? (byte)0xFF : (byte)0x00));
+        var divider = dark
+            ? Color.FromArgb(0x1F, 0xFF, 0xFF, 0xFF)
+            : Color.FromArgb(0x1A, 0x00, 0x00, 0x00);
         DividerBrush = CreateBrush(_settings.TransparentDisplay ? Color.FromArgb(0, divider.R, divider.G, divider.B) : divider);
+        UpdateReadingBrushes();
+    }
+
+    private void UpdateReadingBrushes()
+    {
+        CpuPercentageBrush = _hasCpuPercentage ? ForegroundBrush : MissingBrush;
+        MemoryPercentageBrush = _hasMemoryPercentage ? ForegroundBrush : MissingBrush;
+        GpuPercentageBrush = _hasGpuPercentage ? ForegroundBrush : MissingBrush;
+        GpuMemoryPercentageBrush = _hasGpuMemoryPercentage ? ForegroundBrush : MissingBrush;
+        GpuTemperatureBrush = _hasGpuTemperature ? SecondaryBrush : MissingBrush;
+        CpuTemperatureBrush = _hasCpuTemperature ? SecondaryBrush : MissingBrush;
+        NetworkDownloadBrush = _hasNetworkDownload ? ForegroundBrush : MissingBrush;
+        NetworkUploadBrush = _hasNetworkUpload ? ForegroundBrush : MissingBrush;
+        NetworkDownloadArrowBrush = _hasNetworkDownload ? _accentBrush : MissingBrush;
+        NetworkUploadArrowBrush = _hasNetworkUpload ? _accentBrush : MissingBrush;
+        NetworkDownloadUnitBrush = _hasNetworkDownload ? SecondaryBrush : MissingBrush;
+        NetworkUploadUnitBrush = _hasNetworkUpload ? SecondaryBrush : MissingBrush;
     }
 
     private void OnClockTick(object? sender, EventArgs e) => UpdateTime();
@@ -312,10 +439,10 @@ public sealed class PerformanceBarViewModel : INotifyPropertyChanged
         ? percentage.ToString(CultureInfo.InvariantCulture) + "%"
         : "--";
 
-    private static string FormatTemperature(int? value) =>
+    private static string FormatTemperatureValue(int? value) =>
         value is { } temperature
-            ? temperature.ToString(CultureInfo.InvariantCulture) + "°"
-            : "--°";
+            ? temperature.ToString(CultureInfo.InvariantCulture)
+            : "--";
 
     private static string FormatNetworkSpeed(double? value) =>
         value is { } speed

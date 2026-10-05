@@ -1,11 +1,11 @@
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using System.Windows.Threading;
 using PerfMonitor.Core.Settings;
 using ComboBox = System.Windows.Controls.ComboBox;
-using CheckBox = System.Windows.Controls.CheckBox;
 using Color = System.Windows.Media.Color;
 using Microsoft.Win32;
 
@@ -36,9 +36,14 @@ public partial class SettingsWindow : Window
         Closed += (_, _) => _savedMessageTimer.Stop();
         IsVisibleChanged += OnIsVisibleChanged;
         Closed += (_, _) => StopListeningForThemeChanges();
+#if DEBUG
+        AutostartToggle.IsEnabled = false;
+        AutostartDisabledNote.Visibility = Visibility.Visible;
+#endif
         SynchronizeControls(_currentSettings);
         ApplyTheme(_currentSettings.Theme);
         _isSynchronizingControls = false;
+        Loaded += OnLoaded;
         if (recoveredInvalidSettings)
         {
             ShowStatus("配置损坏，已备份原文件并恢复默认设置", isError: true, persistent: true);
@@ -60,12 +65,12 @@ public partial class SettingsWindow : Window
 
     private void MetricChanged(object sender, RoutedEventArgs e)
     {
-        if (_isSynchronizingControls || sender is not CheckBox checkBox || checkBox.Tag is not string metric)
+        if (_isSynchronizingControls || sender is not ToggleButton toggle || toggle.Tag is not string metric)
         {
             return;
         }
 
-        var enabled = checkBox.IsChecked == true;
+        var enabled = toggle.IsChecked == true;
         var patch = metric switch
         {
             "Cpu" => new SettingsPatch { Metrics = new MetricsSettingsPatch { Cpu = enabled } },
@@ -73,6 +78,26 @@ public partial class SettingsWindow : Window
             "Gpu" => new SettingsPatch { Metrics = new MetricsSettingsPatch { Gpu = enabled } },
             "Network" => new SettingsPatch { Metrics = new MetricsSettingsPatch { Network = enabled } },
             "Time" => new SettingsPatch { Metrics = new MetricsSettingsPatch { Time = enabled } },
+            _ => null
+        };
+        if (patch is not null)
+        {
+            Save(patch);
+        }
+    }
+
+    private void BehaviorChanged(object sender, RoutedEventArgs e)
+    {
+        if (_isSynchronizingControls || sender is not ToggleButton toggle || toggle.Tag is not string behavior)
+        {
+            return;
+        }
+
+        var enabled = toggle.IsChecked == true;
+        var patch = behavior switch
+        {
+            "Autostart" => new SettingsPatch { Autostart = enabled },
+            "AutoHideOnFullscreen" => new SettingsPatch { AutoHideOnFullscreen = enabled },
             _ => null
         };
         if (patch is not null)
@@ -159,11 +184,13 @@ public partial class SettingsWindow : Window
 
     private void SynchronizeControls(PerformanceSettings settings)
     {
-        CpuCheckBox.IsChecked = settings.Metrics.Cpu;
-        MemoryCheckBox.IsChecked = settings.Metrics.Memory;
-        GpuCheckBox.IsChecked = settings.Metrics.Gpu;
-        NetworkCheckBox.IsChecked = settings.Metrics.Network;
-        TimeCheckBox.IsChecked = settings.Metrics.Time;
+        CpuToggle.IsChecked = settings.Metrics.Cpu;
+        MemoryToggle.IsChecked = settings.Metrics.Memory;
+        GpuToggle.IsChecked = settings.Metrics.Gpu;
+        NetworkToggle.IsChecked = settings.Metrics.Network;
+        TimeToggle.IsChecked = settings.Metrics.Time;
+        AutostartToggle.IsChecked = settings.Autostart;
+        FullscreenAutoHideToggle.IsChecked = settings.AutoHideOnFullscreen;
         FastRefreshComboBox.SelectedValue = settings.FastRefreshMilliseconds.ToString(CultureInfo.InvariantCulture);
         SlowRefreshComboBox.SelectedValue = settings.SlowRefreshMilliseconds.ToString(CultureInfo.InvariantCulture);
         ThemeComboBox.SelectedValue = settings.Theme.ToString();
@@ -181,8 +208,33 @@ public partial class SettingsWindow : Window
             BarTheme.Light => false,
             _ => PerformanceBarViewModel.IsDarkSystemTheme()
         };
-        Background = CreateBrush(dark ? Color.FromRgb(0x20, 0x23, 0x29) : Color.FromRgb(0xF4, 0xF6, 0xF8));
-        Foreground = CreateBrush(dark ? Color.FromRgb(0xF4, 0xF6, 0xF8) : Color.FromRgb(0x24, 0x2A, 0x31));
+        Resources["PageBackgroundBrush"] = CreateBrush(
+            dark ? Color.FromRgb(0x11, 0x11, 0x13) : Color.FromRgb(0xF5, 0xF5, 0xF7));
+        Resources["SurfaceBrush"] = CreateBrush(
+            dark ? Color.FromRgb(0x1E, 0x1E, 0x21) : Color.FromRgb(0xFF, 0xFF, 0xFF));
+        Resources["PrimaryTextBrush"] = CreateBrush(
+            dark ? Color.FromRgb(0xF5, 0xF5, 0xF7) : Color.FromRgb(0x1D, 0x1D, 0x1F));
+        Resources["SecondaryTextBrush"] = CreateBrush(
+            dark ? Color.FromRgb(0xA1, 0xA1, 0xA6) : Color.FromRgb(0x70, 0x70, 0x70));
+        Resources["AccentBrush"] = CreateBrush(
+            dark ? Color.FromRgb(0x29, 0x97, 0xFF) : Color.FromRgb(0x00, 0x71, 0xE3));
+        Resources["ControlBackgroundBrush"] = CreateBrush(
+            dark ? Color.FromRgb(0x2C, 0x2C, 0x2E) : Color.FromRgb(0xE8, 0xE8, 0xED));
+        Resources["SwitchTrackBrush"] = CreateBrush(dark
+            ? Color.FromArgb(0x52, 0x78, 0x78, 0x80)
+            : Color.FromArgb(0x3D, 0x78, 0x78, 0x80));
+        Resources["DividerBrush"] = CreateBrush(dark
+            ? Color.FromArgb(0x14, 0xFF, 0xFF, 0xFF)
+            : Color.FromArgb(0x0F, 0x00, 0x00, 0x00));
+        Resources["HoverBrush"] = CreateBrush(
+            dark ? Color.FromRgb(0x3A, 0x3A, 0x3C) : Color.FromRgb(0xE0, 0xE0, 0xE6));
+        Resources["ThumbBrush"] = CreateBrush(Color.FromRgb(0xFF, 0xFF, 0xFF));
+    }
+
+    private void OnLoaded(object sender, RoutedEventArgs e)
+    {
+        var availableHeight = SystemParameters.WorkArea.Height;
+        Height = Math.Clamp(availableHeight - 48, MinHeight, MaxHeight);
     }
 
     private void ShowStatus(string message, bool isError, bool persistent)
