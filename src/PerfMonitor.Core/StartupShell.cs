@@ -928,13 +928,19 @@ public sealed class StartupShellController : IDisposable
         Interlocked.Exchange(ref _metricsGeneration, generation);
         lock (_metricsSnapshotSync)
         {
-            _latestMetricsSnapshot = new PerformanceMetricsSnapshot(
-                generation,
-                CpuPercentage: null,
-                MemoryPercentage: null,
-                MemoryUsedGiB: null,
-                MemoryTotalGiB: null,
-                DateTimeOffset.UtcNow);
+            // 代际切换保留上一代已知读数：采样暂停（拖动/隐藏/改刷新率）恢复后，
+            // 慢通道首轮发布并入旧值而不是把快通道字段清成缺失，
+            // 避免界面在新采样到来前闪现“--”并连带一次宽度收缩。
+            // 旧代际在途读数仍被代际隔离拒绝，不会穿越到这里。
+            _latestMetricsSnapshot = _latestMetricsSnapshot is { } previous
+                ? previous with { Generation = generation }
+                : new PerformanceMetricsSnapshot(
+                    generation,
+                    CpuPercentage: null,
+                    MemoryPercentage: null,
+                    MemoryUsedGiB: null,
+                    MemoryTotalGiB: null,
+                    DateTimeOffset.UtcNow);
         }
 
         _host.SetMetricGeneration(generation);

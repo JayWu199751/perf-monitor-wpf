@@ -286,6 +286,36 @@ public sealed class PerformanceMetricsContractTests
         Assert.Equal(1, source.MaximumConcurrentCpuReads);
     }
 
+    [Fact(DisplayName = "采样暂停恢复后，慢通道首轮发布保留快通道旧读数")]
+    public async Task Resuming_sampling_keeps_previous_fast_readings_instead_of_missing_values()
+    {
+        var slowSource = new BlockingSlowMetricsSource();
+        var host = new MetricsShellHost(
+            new SequenceSystemMetricsSource(
+                Enumerable.Repeat<CpuTimeCounters?>(
+                    new CpuTimeCounters(KernelTime: 100, UserTime: 50, IdleTime: 80),
+                    count: 100),
+                new PhysicalMemoryCounters(TotalPhysicalBytes: 8UL * 1024 * 1024 * 1024, AvailablePhysicalBytes: 3UL * 1024 * 1024 * 1024)),
+            slowSource);
+        var shell = new StartupShellController(host);
+
+        shell.Start();
+        await slowSource.FirstGpuReadStarted.WaitAsync(TimeSpan.FromSeconds(3));
+        var fastSnapshot = await host.ReadSnapshotUntilAsync(value => value.CpuPercentage is not null);
+        host.ClickTrayLeft();
+        host.ClickTrayLeft();
+        // 先放行被取消代际阻塞的首轮读取，让出慢通道闸门，新代际读取才能继续。
+        slowSource.ReleaseFirstGpuRead();
+        var resumedSnapshot = await host.ReadSnapshotUntilAsync(value => value.GpuPercentage == 22);
+        shell.SelectMenuItem(ShellMenuAction.Exit);
+
+        Assert.Equal(0, fastSnapshot.CpuPercentage);
+        Assert.Equal(63, fastSnapshot.MemoryPercentage);
+        Assert.Equal(22, resumedSnapshot.GpuPercentage);
+        Assert.Equal(0, resumedSnapshot.CpuPercentage);
+        Assert.Equal(63, resumedSnapshot.MemoryPercentage);
+    }
+
     [Theory(DisplayName = "快通道可选择规格支持的刷新周期")]
     [InlineData(1000)]
     [InlineData(2000)]

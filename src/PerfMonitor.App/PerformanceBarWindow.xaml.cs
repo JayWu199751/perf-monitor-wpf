@@ -12,8 +12,6 @@ namespace PerfMonitor.App;
 public partial class PerformanceBarWindow : Window, IPerformanceBarPlacementPort
 {
     private readonly Action _requestNativeMove;
-    private double _peakWidth = 64;
-    private bool _pendingWidthReset;
 
     public PerformanceBarWindow(Action requestNativeMove)
     {
@@ -22,7 +20,7 @@ public partial class PerformanceBarWindow : Window, IPerformanceBarPlacementPort
 
         // 分层窗口中，Alpha=0 的完全透明像素会穿透输入；Alpha=1 保持近透明外观并接收命中。
         Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(1, 0, 0, 0));
-        Loaded += (_, _) => RefreshNaturalWidth(resetPeakWidth: _pendingWidthReset);
+        Loaded += (_, _) => RefreshNaturalWidth();
     }
 
     public event EventHandler? ContextMenuRequested;
@@ -44,9 +42,13 @@ public partial class PerformanceBarWindow : Window, IPerformanceBarPlacementPort
 
     private nint WindowHandle => new WindowInteropHelper(this).EnsureHandle();
 
-    internal void RefreshNaturalWidth(bool resetPeakWidth = false)
+    /// <summary>
+    /// 把窗口宽度设为内容自然宽，可增可减，下限为 64 DIP 命中区；高度由 SizeToContent 跟随。
+    /// 个位数读数的等数字宽占位符使 9% 与 10% 同宽，宽度变化集中在位数增减边界；
+    /// 重复相同宽度不触发尺寸变化，也就不会重摆窗口。
+    /// </summary>
+    internal void RefreshNaturalWidth()
     {
-        _pendingWidthReset |= resetPeakWidth;
         if (!IsLoaded || Dispatcher.HasShutdownStarted || Dispatcher.HasShutdownFinished)
         {
             return;
@@ -59,25 +61,13 @@ public partial class PerformanceBarWindow : Window, IPerformanceBarPlacementPort
                 return;
             }
 
-            if (_pendingWidthReset)
-            {
-                _peakWidth = MinWidth;
-                Width = _peakWidth;
-                _pendingWidthReset = false;
-            }
-
             if (Content is not FrameworkElement content)
             {
                 return;
             }
 
             content.Measure(new WpfSize(double.PositiveInfinity, double.PositiveInfinity));
-            var desiredWidth = Math.Max(MinWidth, Math.Ceiling(content.DesiredSize.Width));
-            if (desiredWidth > _peakWidth)
-            {
-                _peakWidth = desiredWidth;
-                Width = _peakWidth;
-            }
+            Width = Math.Max(MinWidth, Math.Ceiling(content.DesiredSize.Width));
         }));
     }
 

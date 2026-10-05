@@ -322,8 +322,8 @@ internal sealed class WpfStartupShellHost : IStartupShellHost, IDisposable
     {
         var themeChanged = _currentSettings.Theme != settings.Theme;
         _currentSettings = settings;
-        var resetWidth = _performanceBarViewModel.ApplySettings(settings);
-        _performanceBar?.RefreshNaturalWidth(resetWidth);
+        _performanceBarViewModel.ApplySettings(settings);
+        _performanceBar?.RefreshNaturalWidth();
         _settingsWindow?.ApplySettings(settings, _settingsStore.RecoveredInvalidSettingsOnLastLoad);
         if (themeChanged)
         {

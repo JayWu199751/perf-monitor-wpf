@@ -1,3 +1,4 @@
+using System.Windows;
 using PerfMonitor.App;
 using PerfMonitor.Core.Settings;
 
@@ -5,39 +6,42 @@ namespace PerfMonitor.App.Tests;
 
 public sealed class PerformanceBarViewModelSettingsTests
 {
-    [Fact(DisplayName = "透明显示开合不触发布局宽重算（保留峰值宽）")]
-    public void Toggling_transparent_display_does_not_report_a_layout_change()
+    [Fact(DisplayName = "透明显示开合按设置更新边框粗细")]
+    public void Toggling_transparent_display_updates_border_thickness()
     {
         var vm = new PerformanceBarViewModel();
-        var transparent = PerformanceSettings.Default with { TransparentDisplay = true };
+        try
+        {
+            vm.ApplySettings(PerformanceSettings.Default with { TransparentDisplay = true });
+            var transparentThickness = vm.BorderThickness;
 
-        vm.ApplySettings(transparent);
+            vm.ApplySettings(PerformanceSettings.Default with { TransparentDisplay = false });
 
-        var result = vm.ApplySettings(transparent with { TransparentDisplay = false });
-
-        vm.Dispose();
-        Assert.False(result, "透明显示变化保留峰值宽，不得触发自然宽重算。");
+            Assert.Equal(new Thickness(0), transparentThickness);
+            Assert.Equal(new Thickness(1), vm.BorderThickness);
+        }
+        finally
+        {
+            vm.Dispose();
+        }
     }
 
-    [Fact(DisplayName = "透明显示关闭到开启同样不触发布局宽重算")]
-    public void Enabling_transparent_display_does_not_report_a_layout_change()
+    [Fact(DisplayName = "字号变化更新字号与派生间距属性")]
+    public void Changing_font_size_updates_font_size_properties()
     {
         var vm = new PerformanceBarViewModel();
+        try
+        {
+            var before = vm.FontSize;
 
-        var result = vm.ApplySettings(PerformanceSettings.Default with { TransparentDisplay = true });
+            vm.ApplySettings(PerformanceSettings.Default with { FontSize = 14 });
 
-        vm.Dispose();
-        Assert.False(result, "透明显示变化保留峰值宽，不得触发自然宽重算。");
-    }
-
-    [Fact(DisplayName = "字号或指标组合变化仍触发布局宽重算（重置峰值）")]
-    public void Changing_font_size_still_reports_a_layout_change()
-    {
-        var vm = new PerformanceBarViewModel();
-
-        var result = vm.ApplySettings(PerformanceSettings.Default with { FontSize = 14 });
-
-        vm.Dispose();
-        Assert.True(result);
+            Assert.Equal(14, vm.FontSize);
+            Assert.NotEqual(before, vm.FontSize);
+        }
+        finally
+        {
+            vm.Dispose();
+        }
     }
 }
