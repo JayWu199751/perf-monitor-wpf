@@ -11,8 +11,14 @@
     <ApplicationIcon>Resources\icon.ico</ApplicationIcon>
   </PropertyGroup>
 
+  <!-- WPF 通过 app.manifest 声明进程 DPI；Windows Forms 仅用于 NotifyIcon。 -->
+  <PropertyGroup>
+    <NoWarn>$(NoWarn);WFO0003</NoWarn>
+  </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\..\src\PerfMonitor.Core\PerfMonitor.Core.csproj" />
+    <ProjectReference Include="..\..\src\PerfMonitor.Windows\PerfMonitor.Windows.csproj" />
   </ItemGroup>
 
   <ItemGroup>

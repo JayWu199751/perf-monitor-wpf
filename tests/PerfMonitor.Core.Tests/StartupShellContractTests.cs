@@ -1,4 +1,5 @@
 using PerfMonitor.Core.Shell;
+using PerfMonitor.Core.Metrics;
 
 namespace PerfMonitor.Core.Tests;
 
@@ -176,6 +177,22 @@ public sealed class StartupShellContractTests
         ], host.ContextMenus[0].Items);
     }
 
+    [Fact(DisplayName = "性能条左键请求原生整窗移动，右键只打开菜单")]
+    public void Performance_bar_move_and_menu_actions_keep_their_mouse_semantics()
+    {
+        var host = new RecordingStartupShellHost();
+        var shell = new StartupShellController(host);
+        shell.Start();
+
+        host.RequestPerformanceBarNativeMove();
+        Assert.Equal(1, host.NativeMoveStartCount);
+
+        shell.OnPerformanceBarRightClick();
+
+        Assert.Equal(1, host.NativeMoveStartCount);
+        Assert.Equal(ShellMenuOrigin.PerformanceBar, host.ContextMenus[^1].Origin);
+    }
+
     [Fact(DisplayName = "从右键菜单打开设置会按需显示基础设置窗")]
     public void Selecting_open_settings_creates_and_shows_the_settings_window()
     {
@@ -237,6 +254,9 @@ public sealed class StartupShellContractTests
         private Action? _trayLeftClick;
         private Action? _trayRightClick;
         private Action<ShellMenuAction>? _selectMenuItem;
+        private Action? _performanceBarMoveRequestHandler;
+
+        public ISystemMetricsSource? SystemMetricsSource => null;
 
         public List<(bool Visible, bool Activate)> VisibilityChanges { get; } = [];
 
@@ -253,6 +273,20 @@ public sealed class StartupShellContractTests
         public int SettingsWindowHideCount { get; private set; }
 
         public int ShutdownCount { get; private set; }
+
+        public int NativeMoveStartCount { get; private set; }
+
+        public void SetPerformanceBarMoveRequestHandler(Action handler)
+        {
+            _performanceBarMoveRequestHandler = handler;
+        }
+
+        public void BeginPerformanceBarNativeMove()
+        {
+            NativeMoveStartCount++;
+        }
+
+        public void RequestPerformanceBarNativeMove() => _performanceBarMoveRequestHandler?.Invoke();
 
         public void ShowPerformanceBar(bool activate)
         {
@@ -295,6 +329,14 @@ public sealed class StartupShellContractTests
         public void HideSettingsWindow()
         {
             SettingsWindowHideCount++;
+        }
+
+        public void SetMetricGeneration(long generation)
+        {
+        }
+
+        public void UpdatePerformanceMetrics(PerformanceMetricsSnapshot snapshot)
+        {
         }
 
         public void Shutdown()

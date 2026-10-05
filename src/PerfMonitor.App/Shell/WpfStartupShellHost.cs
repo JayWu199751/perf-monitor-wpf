@@ -3,10 +3,13 @@ using System.IO;
 using DrawingIcon = System.Drawing.Icon;
 using Forms = System.Windows.Forms;
 using PerfMonitor.Core.Shell;
+using PerfMonitor.Core.Metrics;
+using PerfMonitor.Windows.Metrics;
 using WpfApplication = System.Windows.Application;
 using WpfContextMenu = System.Windows.Controls.ContextMenu;
 using WpfMenuItem = System.Windows.Controls.MenuItem;
 using System.Windows.Controls.Primitives;
+using System.Windows.Threading;
 
 namespace PerfMonitor.App.Shell;
 
@@ -14,11 +17,14 @@ internal sealed class WpfStartupShellHost : IStartupShellHost, IDisposable
 {
     private readonly WpfApplication _application;
     private readonly WpfContextMenu _sharedContextMenu = new();
+    private readonly PerformanceBarViewModel _performanceBarViewModel = new();
+    private readonly WindowsSystemMetricsSource _systemMetricsSource = new();
     private PerformanceBarWindow? _performanceBar;
     private SettingsWindow? _settingsWindow;
     private Forms.NotifyIcon? _trayIcon;
+    private Action? _performanceBarMoveRequestHandler;
     private bool _shutdownRequested;
-    private bool _disposed;
+    private volatile bool _disposed;
 
     public WpfStartupShellHost(WpfApplication application)
     {
@@ -30,6 +36,18 @@ internal sealed class WpfStartupShellHost : IStartupShellHost, IDisposable
     public event EventHandler? PerformanceBarClosed;
 
     public event EventHandler? SettingsWindowCloseRequested;
+
+    public void SetPerformanceBarMoveRequestHandler(Action handler)
+    {
+        _performanceBarMoveRequestHandler = handler;
+    }
+
+    public void BeginPerformanceBarNativeMove()
+    {
+        _performanceBar?.BeginNativeMove();
+    }
+
+    public ISystemMetricsSource? SystemMetricsSource => _systemMetricsSource;
 
     public void ShowPerformanceBar(bool activate)
     {
@@ -126,6 +144,32 @@ internal sealed class WpfStartupShellHost : IStartupShellHost, IDisposable
         _settingsWindow?.Hide();
     }
 
+    public void SetMetricGeneration(long generation) =>
+        _performanceBarViewModel.SetMetricGeneration(generation);
+
+    public void UpdatePerformanceMetrics(PerformanceMetricsSnapshot snapshot)
+    {
+        var dispatcher = _application.Dispatcher;
+        if (_disposed || dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished)
+        {
+            return;
+        }
+
+        try
+        {
+            _ = dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
+            {
+                if (!_disposed && !dispatcher.HasShutdownStarted && !dispatcher.HasShutdownFinished)
+                {
+                    _performanceBarViewModel.Apply(snapshot);
+                }
+            }));
+        }
+        catch (InvalidOperationException) when (dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished)
+        {
+        }
+    }
+
     public void Shutdown()
     {
         if (_shutdownRequested)
@@ -167,7 +211,11 @@ internal sealed class WpfStartupShellHost : IStartupShellHost, IDisposable
             return;
         }
 
-        _performanceBar = new PerformanceBarWindow();
+        _performanceBar = new PerformanceBarWindow(
+            () => _performanceBarMoveRequestHandler?.Invoke())
+        {
+            DataContext = _performanceBarViewModel
+        };
         _performanceBar.ContextMenuRequested += (_, _) => PerformanceBarRightClickRequested?.Invoke(this, EventArgs.Empty);
         _performanceBar.Closed += (_, _) =>
         {
