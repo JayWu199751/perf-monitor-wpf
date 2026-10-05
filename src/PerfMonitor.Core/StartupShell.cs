@@ -23,8 +23,28 @@ public sealed record StartupShellState(
     bool IsSettingsWindowCreated,
     bool IsSettingsWindowVisible);
 
+public sealed record StartupAccessContext(
+    bool IsReleaseBuild,
+    bool IsElevated,
+    bool ElevationAlreadyAttempted,
+    bool HasExistingInstance,
+    bool IsElevationHandoff);
+
+public enum StartupAccessDecision
+{
+    StartCurrentInstance,
+    StartCurrentInstanceAndAttemptElevation,
+    NotifyExistingInstanceAndExit,
+    HandOffToElevatedInstance,
+    RejectElevationHandoff
+}
+
 public interface IStartupShellHost
 {
+    void SetPerformanceBarMoveRequestHandler(Action handler);
+
+    void BeginPerformanceBarNativeMove();
+
     ISystemMetricsSource? SystemMetricsSource { get; }
 
     void ShowPerformanceBar(bool activate);
@@ -66,6 +86,7 @@ public sealed class StartupShellController
         int fastRefreshMilliseconds = PerformanceMetricsSampler.DefaultFastRefreshMilliseconds)
     {
         _host = host;
+        _host.SetPerformanceBarMoveRequestHandler(OnPerformanceBarNativeMoveRequested);
         if (host.SystemMetricsSource is { } source)
         {
             _metricsSampler = new PerformanceMetricsSampler(source, PublishMetrics, fastRefreshMilliseconds);
@@ -73,6 +94,30 @@ public sealed class StartupShellController
     }
 
     public StartupShellState State { get; private set; } = new(false, false, false, false, false);
+
+    public StartupAccessDecision Start(StartupAccessContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        if (context.HasExistingInstance)
+        {
+            if (context.IsReleaseBuild && context.IsElevationHandoff)
+            {
+                return context.IsElevated
+                    ? StartupAccessDecision.HandOffToElevatedInstance
+                    : StartupAccessDecision.RejectElevationHandoff;
+            }
+
+            return StartupAccessDecision.NotifyExistingInstanceAndExit;
+        }
+
+        if (context.IsReleaseBuild && !context.IsElevated && !context.ElevationAlreadyAttempted)
+        {
+            return StartupAccessDecision.StartCurrentInstanceAndAttemptElevation;
+        }
+
+        return StartupAccessDecision.StartCurrentInstance;
+    }
 
     public void Start()
     {
@@ -85,6 +130,17 @@ public sealed class StartupShellController
         _host.CreateTrayIcon(OnTrayLeftClick, OnTrayRightClick);
         State = new(true, true, true, false, false);
         StartMetricSampling();
+    }
+
+    public void OnRepeatedLaunchRequested()
+    {
+        if (!State.IsRunning)
+        {
+            return;
+        }
+
+        _host.SetPerformanceBarVisible(visible: true, activate: true);
+        State = State with { IsPerformanceBarVisible = true };
     }
 
     public void SelectMenuItem(ShellMenuAction action)
@@ -115,6 +171,16 @@ public sealed class StartupShellController
     public void OnPerformanceBarRightClick()
     {
         ShowContextMenu(ShellMenuOrigin.PerformanceBar);
+    }
+
+    public void OnPerformanceBarNativeMoveRequested()
+    {
+        if (!State.IsRunning)
+        {
+            return;
+        }
+
+        _host.BeginPerformanceBarNativeMove();
     }
 
     public void OnSettingsWindowClosed()

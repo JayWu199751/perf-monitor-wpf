@@ -44,7 +44,7 @@ WPF `HwndSource` 等互操作设施可连接原生窗口与托管内容；使用
 | GPU | `Process` 异步 nvidia-smi | 参数列表、UseShellExecute=false、CreateNoWindow=true、异步输出、5 秒超时及 kill/dispose，首条有效行 |
 | CPU 温度 | 进程内 WMI/COM，或受支持的 System.Management | 后台查询、COM apartment 合同、超时/取消策略、热区单位/最大有效值、权限降级 |
 
-`GetSystemTimes` 的 kernel 值含 idle；超过 64 processors 时它只覆盖调用线程所在主 processor group，不能宣传全机器支持任意规模。目标普通桌面先记录该边界，若实际机器超过 64 logical processors 再设计聚合。[GetSystemTimes 文档](https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getsystemtimes)。
+`GetSystemTimes` 的 kernel 值含 idle；超过 64 processors 时它只覆盖调用线程所在主 processor group。若产品合同要求全机读数，应动态枚举活动组的有效 CPU mask，逐组以 `SetThreadGroupAffinity` 切换主组并读取、累加计数；PerfMonitor-WPF 的实现决策见 [ADR 0003](../docs/adr/0003-cpu-memory-sampling.md)。[GetSystemTimes 文档](https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getsystemtimes)。
 
 `GlobalMemoryStatusEx` 返回物理/虚拟内存信息，结果随系统状态变化，不能要求两次查询逐字节一致。[GlobalMemoryStatusEx 文档](https://learn.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-globalmemorystatusex)。
 

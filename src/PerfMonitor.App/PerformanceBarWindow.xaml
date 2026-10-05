@@ -23,14 +23,14 @@
                    FontSize="14"
                    Foreground="#FFF4F6F8"
                    TextOptions.TextFormattingMode="Display">
-            <Run Text="CPU " /><Run Text="{Binding CpuPercentageText}" FontWeight="SemiBold" />
-            <Run Text="  ·  内存 " /><Run Text="{Binding MemoryPercentageText}" FontWeight="SemiBold" />
+            <Run Text="CPU " /><Run Text="{Binding CpuPercentageText, Mode=OneWay}" FontWeight="SemiBold" />
+            <Run Text="  ·  内存 " /><Run Text="{Binding MemoryPercentageText, Mode=OneWay}" FontWeight="SemiBold" />
             <Run Text="  ·  GPU " /><Run Text="--%" FontWeight="SemiBold" />
             <Run Text="  ·  网络 " />
             <Run Text="↓ " Foreground="#FF73B7FF" />
-            <Run Text="{Binding NetworkDownloadSpeedText}" FontWeight="SemiBold" />
+            <Run Text="{Binding NetworkDownloadSpeedText, Mode=OneWay}" FontWeight="SemiBold" />
             <Run Text=" MB/s ↑ " Foreground="#FF73B7FF" />
-            <Run Text="{Binding NetworkUploadSpeedText}" FontWeight="SemiBold" />
+            <Run Text="{Binding NetworkUploadSpeedText, Mode=OneWay}" FontWeight="SemiBold" />
             <Run Text=" MB/s" />
         </TextBlock>
     </Border>
