@@ -297,6 +297,31 @@ internal sealed class WpfStartupShellHost : IStartupShellHost, IDisposable
         _settingsWindow?.Hide();
     }
 
+    /// <summary>
+    /// 闲置回收释放设置窗实例：先摘除关闭拦截，再在 UI 线程关闭窗口并丢弃引用；
+    /// 窗口自身的定时器与 SystemEvents 挂钩经其 Closed 处理退订。
+    /// </summary>
+    public void ReleaseSettingsWindow()
+    {
+        var dispatcher = _application.Dispatcher;
+        if (_disposed || dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished)
+        {
+            return;
+        }
+
+        _ = dispatcher.BeginInvoke(new Action(() =>
+        {
+            if (_settingsWindow is not { } window)
+            {
+                return;
+            }
+
+            _settingsWindow = null;
+            window.Closing -= OnSettingsWindowClosing;
+            window.Close();
+        }));
+    }
+
     public void SetMetricGeneration(long generation) =>
         _performanceBarViewModel.SetMetricGeneration(generation);
 

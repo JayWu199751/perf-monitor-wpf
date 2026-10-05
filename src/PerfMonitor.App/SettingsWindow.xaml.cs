@@ -1,10 +1,12 @@
 using System.Globalization;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using System.Windows.Threading;
 using PerfMonitor.Core.Settings;
+using PerfMonitor.Core.Shell;
 using ComboBox = System.Windows.Controls.ComboBox;
 using Color = System.Windows.Media.Color;
 using Microsoft.Win32;
@@ -36,6 +38,8 @@ public partial class SettingsWindow : Window
         Closed += (_, _) => _savedMessageTimer.Stop();
         IsVisibleChanged += OnIsVisibleChanged;
         Closed += (_, _) => StopListeningForThemeChanges();
+        SourceInitialized += (_, _) => UpdateMaxHeightForCurrentScreen();
+        LocationChanged += (_, _) => UpdateMaxHeightForCurrentScreen();
 #if DEBUG
         AutostartToggle.IsEnabled = false;
         AutostartDisabledNote.Visibility = Visibility.Visible;
@@ -43,7 +47,6 @@ public partial class SettingsWindow : Window
         SynchronizeControls(_currentSettings);
         ApplyTheme(_currentSettings.Theme);
         _isSynchronizingControls = false;
-        Loaded += OnLoaded;
         if (recoveredInvalidSettings)
         {
             ShowStatus("配置损坏，已备份原文件并恢复默认设置", isError: true, persistent: true);
@@ -231,10 +234,109 @@ public partial class SettingsWindow : Window
         Resources["ThumbBrush"] = CreateBrush(Color.FromRgb(0xFF, 0xFF, 0xFF));
     }
 
-    private void OnLoaded(object sender, RoutedEventArgs e)
+    /// <summary>
+    /// 按窗口当前所在显示器的工作区重新约束最大高度（DIP）；
+    /// 跨屏移动、工作区变化时重新计算。内容自适应高度，超出即由内容区滚动。
+    /// </summary>
+    private void UpdateMaxHeightForCurrentScreen()
     {
-        var availableHeight = SystemParameters.WorkArea.Height;
-        Height = Math.Clamp(availableHeight - 48, MinHeight, MaxHeight);
+        var workAreaHeight = TryGetMonitorWorkAreaHeight(out var monitorWorkAreaHeight)
+            ? monitorWorkAreaHeight
+            : SystemParameters.WorkArea.Height;
+        MaxHeight = SettingsWindowSizingRules.ResolveMaxWindowHeight(workAreaHeight);
+    }
+
+    /// <summary>读取窗口所在显示器工作区高度并换算为 DIP；失败时返回 false 走主屏回退。</summary>
+    private bool TryGetMonitorWorkAreaHeight(out double workAreaHeight)
+    {
+        workAreaHeight = 0;
+        var handle = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+        if (handle == nint.Zero)
+        {
+            return false;
+        }
+
+        try
+        {
+            var monitor = NativeMethods.MonitorFromWindow(
+                handle, NativeMethods.MonitorDefaultToNearest);
+            if (monitor == nint.Zero
+                || !NativeMethods.GetMonitorInfoW(monitor, out var info))
+            {
+                return false;
+            }
+
+            var dpiScale = 1.0;
+            try
+            {
+                if (NativeMethods.GetDpiForMonitor(monitor, NativeMethods.DpiEffective, out var dpiX, out _)
+                    && dpiX > 0)
+                {
+                    dpiScale = dpiX / 96.0;
+                }
+            }
+            catch (Exception exception) when (
+                exception is DllNotFoundException or EntryPointNotFoundException)
+            {
+            }
+
+            if (dpiScale <= 0)
+            {
+                return false;
+            }
+
+            workAreaHeight = (info.RcWork.Bottom - info.RcWork.Top) / dpiScale;
+            return workAreaHeight > 0;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+
+    private static class NativeMethods
+    {
+        internal const uint MonitorDefaultToNearest = 2;
+
+        internal const int DpiEffective = 0;
+
+        [StructLayout(LayoutKind.Sequential)]
+        internal struct NativeRect
+        {
+            public int Left;
+
+            public int Top;
+
+            public int Right;
+
+            public int Bottom;
+        }
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        internal struct MonitorInfoW
+        {
+            public uint CbSize;
+
+            public NativeRect RcMonitor;
+
+            public NativeRect RcWork;
+
+            public uint DwFlags;
+        }
+
+        [DllImport("user32.dll")]
+        internal static extern nint MonitorFromWindow(nint window, uint flags);
+
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static extern bool GetMonitorInfoW(nint monitor, out MonitorInfoW info);
+
+        [DllImport("shcore.dll")]
+        internal static extern bool GetDpiForMonitor(
+            nint monitor,
+            int dpiType,
+            out uint dpiX,
+            out uint dpiY);
     }
 
     private void ShowStatus(string message, bool isError, bool persistent)
@@ -292,6 +394,11 @@ public partial class SettingsWindow : Window
 
     private void OnSystemParametersChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
+        if (e.PropertyName == nameof(SystemParameters.WorkArea))
+        {
+            UpdateMaxHeightForCurrentScreen();
+        }
+
         if (_currentSettings.Theme == BarTheme.System)
         {
             ApplyTheme(BarTheme.System);

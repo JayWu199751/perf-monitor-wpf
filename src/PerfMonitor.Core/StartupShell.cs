@@ -30,7 +30,8 @@ public sealed record StartupShellState(
     bool IsPerformanceBarVisible,
     bool IsTrayIconVisible,
     bool IsSettingsWindowCreated,
-    bool IsSettingsWindowVisible);
+    bool IsSettingsWindowVisible,
+    bool IsSettingsWindowRecyclePending = false);
 
 public sealed record StartupAccessContext(
     bool IsReleaseBuild,
@@ -68,6 +69,21 @@ public enum AutostartRequestOutcome
 public interface IAutostartPort
 {
     AutostartRequestOutcome TrySetEnabled(bool enabled);
+}
+
+/// <summary>
+/// 设置窗闲置回收的单次定时端口；控制器负责排程与取消，到期回调通知回收时刻。
+/// Core 只依赖该端口，不依赖 WPF 定时器，便于以注入方式测试闲置状态机。
+/// </summary>
+public interface ISettingsIdleRecycleTimer : IDisposable
+{
+    /// <summary>到期后触发一次 <see cref="Elapsed"/>；重复排程应替换前次待触发项。</summary>
+    void Schedule(TimeSpan idleDelay);
+
+    /// <summary>取消当前待触发项；没有待触发项时无操作。可重复调用。</summary>
+    void Cancel();
+
+    event EventHandler? Elapsed;
 }
 
 public interface IStartupShellHost
@@ -120,6 +136,11 @@ public interface IStartupShellHost
 
     void HideSettingsWindow();
 
+    /// <summary>释放设置窗实例（闲置回收）；宿主负责在 UI 线程关闭窗口并丢弃引用。</summary>
+    void ReleaseSettingsWindow()
+    {
+    }
+
     void SetMetricGeneration(long generation);
 
     void UpdatePerformanceMetrics(PerformanceMetricsSnapshot snapshot);
@@ -148,6 +169,8 @@ public sealed class StartupShellController : IDisposable
     private readonly ITaskbarVisibilityGuardPort? _taskbarGuard;
     private readonly TimeSpan _taskbarGuardFastInterval;
     private readonly TimeSpan _taskbarGuardSlowInterval;
+    private readonly TimeSpan _settingsIdleRecycleDelay;
+    private readonly ISettingsIdleRecycleTimer _settingsRecycleTimer;
     private Timer? _taskbarGuardFastTimer;
     private Timer? _taskbarGuardSlowTimer;
     private bool _isTaskbarGuardActive;
@@ -164,7 +187,9 @@ public sealed class StartupShellController : IDisposable
         int? slowRefreshMilliseconds = null,
         int? placementDebounceMilliseconds = null,
         int? taskbarGuardFastMilliseconds = null,
-        int? taskbarGuardSlowMilliseconds = null)
+        int? taskbarGuardSlowMilliseconds = null,
+        TimeSpan? settingsIdleRecycleDelay = null,
+        ISettingsIdleRecycleTimer? settingsIdleRecycleTimer = null)
     {
         _host = host;
         _settingsStore = host.SettingsStore;
@@ -173,6 +198,9 @@ public sealed class StartupShellController : IDisposable
         _taskbarGuard = host.TaskbarVisibilityGuard;
         _taskbarGuardFastInterval = TimeSpan.FromMilliseconds(taskbarGuardFastMilliseconds ?? 30);
         _taskbarGuardSlowInterval = TimeSpan.FromMilliseconds(taskbarGuardSlowMilliseconds ?? 300);
+        _settingsIdleRecycleDelay = settingsIdleRecycleDelay ?? SettingsIdleRecycleDefaults.Delay;
+        _settingsRecycleTimer = settingsIdleRecycleTimer ?? new SettingsIdleRecycleTimer();
+        _settingsRecycleTimer.Elapsed += OnSettingsIdleRecycleElapsed;
         var loadedSettings = (_settingsStore?.Load() ?? PerformanceSettings.Default).Validate();
         Settings = (loadedSettings with
         {
@@ -313,11 +341,14 @@ public sealed class StartupShellController : IDisposable
                 SetPerformanceBarVisibility(!State.IsPerformanceBarVisible, activate: !State.IsPerformanceBarVisible);
                 break;
             case ShellMenuAction.OpenSettings:
+                // 重新打开取消待执行的回收；实例已释放时宿主按需重建。
+                CancelSettingsIdleRecycle();
                 _host.ShowSettingsWindow(Settings, UpdateSettings, RecoveredInvalidSettingsOnStartup);
                 State = State with
                 {
                     IsSettingsWindowCreated = true,
-                    IsSettingsWindowVisible = true
+                    IsSettingsWindowVisible = true,
+                    IsSettingsWindowRecyclePending = false
                 };
                 break;
             case ShellMenuAction.ToggleCenterInTaskbarRow:
@@ -333,6 +364,7 @@ public sealed class StartupShellController : IDisposable
                 UpdateSettings(new SettingsPatch { TransparentDisplay = !Settings.TransparentDisplay });
                 break;
             case ShellMenuAction.Exit:
+                CancelSettingsIdleRecycle();
                 StopMetricSampling();
                 _placementPersistence?.Flush();
                 StopFullscreenWatcher();
@@ -444,7 +476,40 @@ public sealed class StartupShellController : IDisposable
         }
 
         _host.HideSettingsWindow();
-        State = State with { IsSettingsWindowVisible = false };
+        State = State with { IsSettingsWindowVisible = false, IsSettingsWindowRecyclePending = true };
+        ScheduleSettingsIdleRecycle();
+    }
+
+    private void ScheduleSettingsIdleRecycle()
+    {
+        if (_settingsIdleRecycleDelay <= TimeSpan.Zero)
+        {
+            // 非正间隔表示禁用闲置回收，实例保留到退出。
+            return;
+        }
+
+        _settingsRecycleTimer.Schedule(_settingsIdleRecycleDelay);
+    }
+
+    private void CancelSettingsIdleRecycle()
+    {
+        _settingsRecycleTimer.Cancel();
+        if (State.IsSettingsWindowRecyclePending)
+        {
+            State = State with { IsSettingsWindowRecyclePending = false };
+        }
+    }
+
+    private void OnSettingsIdleRecycleElapsed(object? sender, EventArgs e)
+    {
+        // 仅在仍处于「已创建且已隐藏」状态时释放；到期瞬间被打开则保留实例。
+        if (!State.IsRunning || State.IsSettingsWindowVisible || !State.IsSettingsWindowCreated)
+        {
+            return;
+        }
+
+        _host.ReleaseSettingsWindow();
+        State = State with { IsSettingsWindowCreated = false, IsSettingsWindowRecyclePending = false };
     }
 
     private void OnTrayLeftClick()
@@ -912,6 +977,10 @@ public sealed class StartupShellController : IDisposable
         }
 
         StopFullscreenWatcher();
+        _settingsRecycleTimer.Elapsed -= OnSettingsIdleRecycleElapsed;
+        _settingsRecycleTimer.Cancel();
+        _settingsRecycleTimer.Dispose();
+
         _metricsSampler?.Dispose();
         _slowMetricsSampler?.Dispose();
     }

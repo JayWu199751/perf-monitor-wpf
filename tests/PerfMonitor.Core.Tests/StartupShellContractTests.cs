@@ -677,6 +677,216 @@ public sealed class StartupShellContractTests
         }
     }
 
+    [Fact(DisplayName = "关闭设置窗后按闲置间隔排程回收")]
+    public void Closing_settings_schedules_idle_recycle_with_the_default_interval()
+    {
+        var host = new RecordingStartupShellHost();
+        var timer = new ManualSettingsIdleRecycleTimer();
+        var shell = new StartupShellController(host, settingsIdleRecycleTimer: timer);
+        shell.Start();
+        host.ClickTrayRight();
+        host.SelectMenuItem(ShellMenuAction.OpenSettings);
+
+        shell.OnSettingsWindowClosed();
+
+        Assert.True(shell.State.IsSettingsWindowRecyclePending);
+        Assert.Equal(1, timer.ScheduleCount);
+        Assert.Equal(TimeSpan.FromMinutes(5), timer.ScheduledDelay);
+        Assert.True(shell.State.IsSettingsWindowCreated);
+        Assert.False(shell.State.IsSettingsWindowVisible);
+    }
+
+    [Fact(DisplayName = "闲置回收间隔可以注入以便测试")]
+    public void Idle_recycle_interval_is_injectable()
+    {
+        var host = new RecordingStartupShellHost();
+        var timer = new ManualSettingsIdleRecycleTimer();
+        var shell = new StartupShellController(
+            host,
+            settingsIdleRecycleDelay: TimeSpan.FromSeconds(30),
+            settingsIdleRecycleTimer: timer);
+        shell.Start();
+        host.ClickTrayRight();
+        host.SelectMenuItem(ShellMenuAction.OpenSettings);
+
+        shell.OnSettingsWindowClosed();
+
+        Assert.Equal(1, timer.ScheduleCount);
+        Assert.Equal(TimeSpan.FromSeconds(30), timer.ScheduledDelay);
+    }
+
+    [Fact(DisplayName = "闲置回收到期后释放设置窗实例且不重复释放")]
+    public void Idle_recycle_releases_the_settings_window_once()
+    {
+        var host = new RecordingStartupShellHost();
+        var timer = new ManualSettingsIdleRecycleTimer();
+        var shell = new StartupShellController(host, settingsIdleRecycleTimer: timer);
+        shell.Start();
+        host.ClickTrayRight();
+        host.SelectMenuItem(ShellMenuAction.OpenSettings);
+        shell.OnSettingsWindowClosed();
+
+        timer.Fire();
+
+        Assert.False(shell.State.IsSettingsWindowCreated);
+        Assert.False(shell.State.IsSettingsWindowRecyclePending);
+        Assert.Equal(1, host.ReleaseSettingsWindowCount);
+
+        timer.Fire();
+
+        Assert.Equal(1, host.ReleaseSettingsWindowCount);
+    }
+
+    [Fact(DisplayName = "闲置期内重新打开会取消回收并复用当前实例")]
+    public void Reopening_within_the_idle_window_cancels_recycle_and_reuses_the_instance()
+    {
+        var host = new RecordingStartupShellHost();
+        var timer = new ManualSettingsIdleRecycleTimer();
+        var shell = new StartupShellController(host, settingsIdleRecycleTimer: timer);
+        shell.Start();
+        host.ClickTrayRight();
+        host.SelectMenuItem(ShellMenuAction.OpenSettings);
+        shell.OnSettingsWindowClosed();
+
+        host.SelectMenuItem(ShellMenuAction.OpenSettings);
+
+        Assert.True(shell.State.IsSettingsWindowCreated);
+        Assert.True(shell.State.IsSettingsWindowVisible);
+        Assert.False(shell.State.IsSettingsWindowRecyclePending);
+        Assert.True(timer.CancelCount >= 1);
+        Assert.Equal(0, host.ReleaseSettingsWindowCount);
+
+        timer.Fire();
+
+        Assert.Equal(0, host.ReleaseSettingsWindowCount);
+        Assert.True(shell.State.IsSettingsWindowCreated);
+    }
+
+    [Fact(DisplayName = "回收释放后重新打开会重建设置窗并可再次回收")]
+    public void Reopening_after_release_recreates_the_settings_window()
+    {
+        var host = new RecordingStartupShellHost();
+        var timer = new ManualSettingsIdleRecycleTimer();
+        var shell = new StartupShellController(host, settingsIdleRecycleTimer: timer);
+        shell.Start();
+        host.ClickTrayRight();
+        host.SelectMenuItem(ShellMenuAction.OpenSettings);
+        shell.OnSettingsWindowClosed();
+        timer.Fire();
+
+        host.SelectMenuItem(ShellMenuAction.OpenSettings);
+
+        Assert.True(shell.State.IsSettingsWindowCreated);
+        Assert.True(shell.State.IsSettingsWindowVisible);
+        Assert.Equal(2, host.SettingsWindowShowCount);
+
+        shell.OnSettingsWindowClosed();
+        timer.Fire();
+
+        Assert.Equal(2, host.ReleaseSettingsWindowCount);
+        Assert.False(shell.State.IsSettingsWindowCreated);
+    }
+
+    [Fact(DisplayName = "退出时取消待执行的回收且到期不再释放")]
+    public void Exiting_cancels_the_pending_recycle_and_no_release_happens_afterwards()
+    {
+        var host = new RecordingStartupShellHost();
+        var timer = new ManualSettingsIdleRecycleTimer();
+        var shell = new StartupShellController(host, settingsIdleRecycleTimer: timer);
+        shell.Start();
+        host.ClickTrayRight();
+        host.SelectMenuItem(ShellMenuAction.OpenSettings);
+        shell.OnSettingsWindowClosed();
+
+        host.SelectMenuItem(ShellMenuAction.Exit);
+
+        Assert.False(shell.State.IsRunning);
+        Assert.False(shell.State.IsSettingsWindowRecyclePending);
+        Assert.True(timer.CancelCount >= 1);
+
+        timer.Fire();
+
+        Assert.Equal(0, host.ReleaseSettingsWindowCount);
+    }
+
+    [Fact(DisplayName = "控制器释放时同时释放回收定时器")]
+    public void Disposing_the_controller_disposes_the_recycle_timer()
+    {
+        var host = new RecordingStartupShellHost();
+        var timer = new ManualSettingsIdleRecycleTimer();
+        var shell = new StartupShellController(host, settingsIdleRecycleTimer: timer);
+        shell.Start();
+
+        shell.Dispose();
+
+        Assert.True(timer.IsDisposed);
+    }
+
+    [Fact(DisplayName = "回收到期时设置窗可见则不释放")]
+    public void Recycle_does_not_release_while_the_settings_window_is_visible()
+    {
+        var host = new RecordingStartupShellHost();
+        var timer = new ManualSettingsIdleRecycleTimer();
+        var shell = new StartupShellController(host, settingsIdleRecycleTimer: timer);
+        shell.Start();
+        host.ClickTrayRight();
+        host.SelectMenuItem(ShellMenuAction.OpenSettings);
+
+        timer.Fire();
+
+        Assert.True(shell.State.IsSettingsWindowCreated);
+        Assert.True(shell.State.IsSettingsWindowVisible);
+        Assert.Equal(0, host.ReleaseSettingsWindowCount);
+    }
+
+    [Fact(DisplayName = "隐藏状态下重复关闭不重复排程回收")]
+    public void Closing_a_hidden_settings_window_does_not_reschedule_recycle()
+    {
+        var host = new RecordingStartupShellHost();
+        var timer = new ManualSettingsIdleRecycleTimer();
+        var shell = new StartupShellController(host, settingsIdleRecycleTimer: timer);
+        shell.Start();
+        host.ClickTrayRight();
+        host.SelectMenuItem(ShellMenuAction.OpenSettings);
+
+        shell.OnSettingsWindowClosed();
+        shell.OnSettingsWindowClosed();
+
+        Assert.Equal(1, timer.ScheduleCount);
+        Assert.Equal(1, host.SettingsWindowHideCount);
+    }
+
+    private sealed class ManualSettingsIdleRecycleTimer : ISettingsIdleRecycleTimer
+    {
+        private EventHandler? _elapsed;
+
+        public int ScheduleCount { get; private set; }
+
+        public int CancelCount { get; private set; }
+
+        public TimeSpan? ScheduledDelay { get; private set; }
+
+        public bool IsDisposed { get; private set; }
+
+        public event EventHandler? Elapsed
+        {
+            add => _elapsed += value;
+            remove => _elapsed -= value;
+        }
+
+        public void Schedule(TimeSpan idleDelay)
+        {
+            ScheduleCount++;
+            ScheduledDelay = idleDelay;
+        }
+
+        public void Cancel() => CancelCount++;
+
+        public void Fire() => _elapsed?.Invoke(this, EventArgs.Empty);
+
+        public void Dispose() => IsDisposed = true;
+    }
+
     private sealed class RecordingStartupShellHost : IStartupShellHost
     {
         private Action? _trayLeftClick;
@@ -720,6 +930,8 @@ public sealed class StartupShellContractTests
         public int SettingsWindowShowCount { get; private set; }
 
         public int SettingsWindowHideCount { get; private set; }
+
+        public int ReleaseSettingsWindowCount { get; private set; }
 
         public int ShutdownCount { get; private set; }
 
@@ -818,6 +1030,11 @@ public sealed class StartupShellContractTests
         public void HideSettingsWindow()
         {
             SettingsWindowHideCount++;
+        }
+
+        public void ReleaseSettingsWindow()
+        {
+            ReleaseSettingsWindowCount++;
         }
 
         public void SetMetricGeneration(long generation)

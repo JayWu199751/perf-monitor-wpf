@@ -100,6 +100,8 @@ public partial class App : WpfApplication
         _shellHost!.PerformanceBarRightClickRequested += (_, _) => _shellController!.OnPerformanceBarRightClick();
         _shellHost.PerformanceBarClosed += (_, _) => _shellController!.SelectMenuItem(ShellMenuAction.Exit);
         _shellHost.SettingsWindowCloseRequested += (_, _) => _shellController!.OnSettingsWindowClosed();
+        // 系统注销/关机与共享菜单退出走同一条清理链：停止采样、flush 落位、停 watcher、撤托盘、放行窗口关闭。
+        SessionEnding += (_, _) => _shellController!.SelectMenuItem(ShellMenuAction.Exit);
         _shellController!.Start();
         _singleInstance!.StartListening(
             () => Dispatcher.BeginInvoke(
