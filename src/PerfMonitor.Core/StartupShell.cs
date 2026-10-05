@@ -48,6 +48,18 @@ public enum StartupAccessDecision
     RejectElevationHandoff
 }
 
+public enum AutostartRequestOutcome
+{
+    Enabled,
+    Disabled,
+    Failed
+}
+
+public interface IAutostartPort
+{
+    AutostartRequestOutcome TrySetEnabled(bool enabled);
+}
+
 public interface IStartupShellHost
 {
     void SetPerformanceBarMoveRequestHandler(Action handler);
@@ -73,6 +85,8 @@ public interface IStartupShellHost
 
     ISettingsStore? SettingsStore => null;
 
+    IAutostartPort? AutostartPort => null;
+
     void ShowSettingsWindow(
         PerformanceSettings settings,
         Func<SettingsPatch, PerformanceSettings> updateSettings,
@@ -95,6 +109,7 @@ public sealed class StartupShellController : IDisposable
 {
     private readonly IStartupShellHost _host;
     private readonly ISettingsStore? _settingsStore;
+    private readonly IAutostartPort? _autostartPort;
     private readonly PerformanceMetricsSampler? _metricsSampler;
     private readonly PerformanceSlowMetricsSampler? _slowMetricsSampler;
     private readonly object _metricsSnapshotSync = new();
@@ -110,6 +125,7 @@ public sealed class StartupShellController : IDisposable
     {
         _host = host;
         _settingsStore = host.SettingsStore;
+        _autostartPort = host.AutostartPort;
         var loadedSettings = (_settingsStore?.Load() ?? PerformanceSettings.Default).Validate();
         Settings = (loadedSettings with
         {
@@ -230,6 +246,18 @@ public sealed class StartupShellController : IDisposable
         }
 
         var next = Settings.Apply(patch);
+        if (patch.Autostart is { } requestedAutostart && _autostartPort is { } autostartPort)
+        {
+            var outcome = autostartPort.TrySetEnabled(requestedAutostart);
+            if (outcome == AutostartRequestOutcome.Failed)
+            {
+                throw new InvalidOperationException("开机自启未在系统中生效，已保留原设置。");
+            }
+
+            // 自启状态必须反映系统实际结果，而不是请求值。
+            next = next with { Autostart = outcome == AutostartRequestOutcome.Enabled };
+        }
+
         _settingsStore?.Save(next);
 
         var samplingIntervalChanged =
