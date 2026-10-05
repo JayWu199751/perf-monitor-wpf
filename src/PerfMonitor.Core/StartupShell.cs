@@ -71,7 +71,7 @@ public interface IStartupShellHost
     void Shutdown();
 }
 
-public sealed class StartupShellController
+public sealed class StartupShellController : IDisposable
 {
     private static readonly IReadOnlyList<ShellMenuItem> BasicMenuItems = Array.AsReadOnly(
     [
@@ -81,18 +81,27 @@ public sealed class StartupShellController
 
     private readonly IStartupShellHost _host;
     private readonly PerformanceMetricsSampler? _metricsSampler;
+    private readonly PerformanceSlowMetricsSampler? _slowMetricsSampler;
+    private readonly object _metricsSnapshotSync = new();
+    private PerformanceMetricsSnapshot? _latestMetricsSnapshot;
     private long _metricsGeneration;
+    private bool _disposed;
 
     public StartupShellController(
         IStartupShellHost host,
         int fastRefreshMilliseconds = PerformanceMetricsSampler.DefaultFastRefreshMilliseconds,
-        int slowRefreshMilliseconds = 3000)
+        int slowRefreshMilliseconds = PerformanceSlowMetricsSampler.DefaultRefreshMilliseconds)
     {
         _host = host;
         _host.SetPerformanceBarMoveRequestHandler(OnPerformanceBarNativeMoveRequested);
         if (host.SystemMetricsSource is { } source)
         {
             _metricsSampler = new PerformanceMetricsSampler(source, PublishMetrics, fastRefreshMilliseconds);
+        }
+
+        if (host.SlowMetricsSource is { } slowSource)
+        {
+            _slowMetricsSampler = new PerformanceSlowMetricsSampler(slowSource, PublishSlowMetrics, slowRefreshMilliseconds);
         }
     }
 
@@ -234,25 +243,122 @@ public sealed class StartupShellController
 
     private void StartMetricSampling()
     {
-        _metricsSampler?.Start(SetMetricGeneration);
+        if (_metricsSampler is null)
+        {
+            if (_slowMetricsSampler is null)
+            {
+                return;
+            }
+
+            var generation = Interlocked.Increment(ref _metricsGeneration);
+            SetMetricGeneration(generation);
+            _slowMetricsSampler.Start(generation);
+            return;
+        }
+
+        var currentGeneration = _metricsSampler.Start(SetMetricGeneration);
+        _slowMetricsSampler?.Start(currentGeneration);
     }
 
     private void StopMetricSampling()
     {
-        _metricsSampler?.Stop(SetMetricGeneration);
+        if (_metricsSampler is null)
+        {
+            if (_slowMetricsSampler is null)
+            {
+                return;
+            }
+
+            var generation = Interlocked.Increment(ref _metricsGeneration);
+            SetMetricGeneration(generation);
+            _slowMetricsSampler.Stop(generation);
+            return;
+        }
+
+        var currentGeneration = _metricsSampler.Stop(SetMetricGeneration);
+        _slowMetricsSampler?.Stop(currentGeneration);
     }
 
     private void SetMetricGeneration(long generation)
     {
         Interlocked.Exchange(ref _metricsGeneration, generation);
+        lock (_metricsSnapshotSync)
+        {
+            _latestMetricsSnapshot = new PerformanceMetricsSnapshot(
+                generation,
+                CpuPercentage: null,
+                MemoryPercentage: null,
+                MemoryUsedGiB: null,
+                MemoryTotalGiB: null,
+                DateTimeOffset.UtcNow);
+        }
+
         _host.SetMetricGeneration(generation);
     }
 
     private void PublishMetrics(PerformanceMetricsSnapshot snapshot)
     {
-        if (snapshot.Generation == Interlocked.Read(ref _metricsGeneration))
+        lock (_metricsSnapshotSync)
         {
-            _host.UpdatePerformanceMetrics(snapshot);
+            if (snapshot.Generation != Interlocked.Read(ref _metricsGeneration))
+            {
+                return;
+            }
+
+            var latest = _latestMetricsSnapshot ?? snapshot;
+            latest = latest with
+            {
+                CpuPercentage = snapshot.CpuPercentage,
+                MemoryPercentage = snapshot.MemoryPercentage,
+                MemoryUsedGiB = snapshot.MemoryUsedGiB,
+                MemoryTotalGiB = snapshot.MemoryTotalGiB,
+                Timestamp = snapshot.Timestamp
+            };
+            _latestMetricsSnapshot = latest;
+            _host.UpdatePerformanceMetrics(latest);
         }
+    }
+
+    private void PublishSlowMetrics(long generation, SlowMetricsReading reading)
+    {
+        lock (_metricsSnapshotSync)
+        {
+            if (generation != Interlocked.Read(ref _metricsGeneration))
+            {
+                return;
+            }
+
+            var latest = _latestMetricsSnapshot ?? new PerformanceMetricsSnapshot(
+                generation,
+                CpuPercentage: null,
+                MemoryPercentage: null,
+                MemoryUsedGiB: null,
+                MemoryTotalGiB: null,
+                DateTimeOffset.UtcNow);
+            var gpu = reading.Gpu;
+            latest = latest with
+            {
+                CpuTemperatureCelsius = reading.CpuTemperatureCelsius,
+                GpuPercentage = gpu?.UtilizationPercentage,
+                GpuMemoryPercentage = gpu?.MemoryUtilizationPercentage,
+                GpuTemperatureCelsius = gpu?.TemperatureCelsius,
+                Timestamp = DateTimeOffset.UtcNow
+            };
+            _latestMetricsSnapshot = latest;
+            _host.UpdatePerformanceMetrics(latest);
+        }
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        StopMetricSampling();
+        _metricsSampler?.Dispose();
+        _slowMetricsSampler?.Dispose();
     }
 }

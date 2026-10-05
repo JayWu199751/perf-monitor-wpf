@@ -19,6 +19,7 @@ internal sealed class WpfStartupShellHost : IStartupShellHost, IDisposable
     private readonly WpfContextMenu _sharedContextMenu = new();
     private readonly PerformanceBarViewModel _performanceBarViewModel = new();
     private readonly WindowsSystemMetricsSource _systemMetricsSource = new();
+    private readonly WindowsSlowMetricsSource _slowMetricsSource = new();
     private PerformanceBarWindow? _performanceBar;
     private SettingsWindow? _settingsWindow;
     private Forms.NotifyIcon? _trayIcon;
@@ -48,6 +49,8 @@ internal sealed class WpfStartupShellHost : IStartupShellHost, IDisposable
     }
 
     public ISystemMetricsSource? SystemMetricsSource => _systemMetricsSource;
+
+    public ISlowMetricsSource? SlowMetricsSource => _slowMetricsSource;
 
     public void ShowPerformanceBar(bool activate)
     {

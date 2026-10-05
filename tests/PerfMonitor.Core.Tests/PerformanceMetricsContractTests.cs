@@ -155,6 +155,84 @@ public sealed class PerformanceMetricsContractTests
         Assert.Equal(1, slowSource.TemperatureReadCount);
     }
 
+    [Fact(DisplayName = "GPU 读取失败时 ACPI 温度与 CPU、内存仍进入用户可见快照")]
+    public async Task Slow_gpu_failure_does_not_interrupt_temperature_or_fast_metrics()
+    {
+        var slowSource = new FailingGpuSlowMetricsSource(cpuTemperatureCelsius: 44);
+        var host = new MetricsShellHost(
+            new SequenceSystemMetricsSource(
+                [new CpuTimeCounters(KernelTime: 100, UserTime: 50, IdleTime: 80)],
+                new PhysicalMemoryCounters(TotalPhysicalBytes: 8UL * 1024 * 1024 * 1024, AvailablePhysicalBytes: 3UL * 1024 * 1024 * 1024)),
+            slowSource);
+        var shell = new StartupShellController(host);
+
+        shell.Start();
+        var snapshot = await host.ReadSnapshotUntilAsync(value => value.CpuTemperatureCelsius is not null);
+        shell.SelectMenuItem(ShellMenuAction.Exit);
+
+        Assert.Null(snapshot.GpuPercentage);
+        Assert.Null(snapshot.GpuMemoryPercentage);
+        Assert.Null(snapshot.GpuTemperatureCelsius);
+        Assert.Equal(44, snapshot.CpuTemperatureCelsius);
+        Assert.Equal(0, snapshot.CpuPercentage);
+        Assert.Equal(63, snapshot.MemoryPercentage);
+        Assert.Equal(1, slowSource.GpuReadCount);
+    }
+
+    [Fact(DisplayName = "ACPI 温度读取失败时 GPU 三项与 CPU、内存仍进入用户可见快照")]
+    public async Task Slow_temperature_failure_does_not_interrupt_gpu_or_fast_metrics()
+    {
+        var slowSource = new FailingTemperatureSlowMetricsSource(
+            new GpuMetricsReading(UtilizationPercentage: 31, MemoryUtilizationPercentage: 42, TemperatureCelsius: 57));
+        var host = new MetricsShellHost(
+            new SequenceSystemMetricsSource(
+                [new CpuTimeCounters(KernelTime: 100, UserTime: 50, IdleTime: 80)],
+                new PhysicalMemoryCounters(TotalPhysicalBytes: 8UL * 1024 * 1024 * 1024, AvailablePhysicalBytes: 3UL * 1024 * 1024 * 1024)),
+            slowSource);
+        var shell = new StartupShellController(host);
+
+        shell.Start();
+        var snapshot = await host.ReadSnapshotUntilAsync(value => value.GpuPercentage is not null);
+        shell.SelectMenuItem(ShellMenuAction.Exit);
+
+        Assert.Equal(31, snapshot.GpuPercentage);
+        Assert.Equal(42, snapshot.GpuMemoryPercentage);
+        Assert.Equal(57, snapshot.GpuTemperatureCelsius);
+        Assert.Null(snapshot.CpuTemperatureCelsius);
+        Assert.Equal(0, snapshot.CpuPercentage);
+        Assert.Equal(63, snapshot.MemoryPercentage);
+    }
+
+    [Fact(DisplayName = "停止与重启期间不重叠慢通道读取，旧代际迟到结果不覆盖新快照")]
+    public async Task Slow_metrics_do_not_overlap_or_publish_a_late_generation()
+    {
+        var slowSource = new BlockingSlowMetricsSource();
+        var host = new MetricsShellHost(
+            new SequenceSystemMetricsSource([], memoryReading: null),
+            slowSource);
+        var shell = new StartupShellController(host);
+
+        shell.Start();
+        await slowSource.FirstGpuReadStarted.WaitAsync(TimeSpan.FromSeconds(3));
+        var oldGeneration = host.CurrentGeneration;
+        host.ClickTrayLeft();
+        Assert.True(slowSource.FirstGpuCancellationToken.IsCancellationRequested);
+        host.ClickTrayLeft();
+        var newGeneration = host.CurrentGeneration;
+        await Task.Delay(100);
+        Assert.Equal(1, slowSource.GpuReadCount);
+
+        slowSource.ReleaseFirstGpuRead();
+        var snapshot = await host.ReadSnapshotUntilAsync(value => value.GpuPercentage is not null);
+        shell.SelectMenuItem(ShellMenuAction.Exit);
+
+        Assert.True(newGeneration > oldGeneration);
+        Assert.Equal(newGeneration, snapshot.Generation);
+        Assert.Equal(22, snapshot.GpuPercentage);
+        Assert.Equal(1, slowSource.MaximumConcurrentGpuReads);
+        Assert.Equal(2, slowSource.GpuReadCount);
+    }
+
     [Fact(DisplayName = "隐藏再显示会重建采样基线，旧代际在途读数不能覆盖新快照")]
     public async Task Hiding_and_showing_the_bar_discards_an_earlier_in_flight_generation()
     {
@@ -200,6 +278,30 @@ public sealed class PerformanceMetricsContractTests
         var host = new MetricsShellHost(new SequenceSystemMetricsSource([], memoryReading: null));
 
         Assert.Throws<ArgumentOutOfRangeException>(() => new StartupShellController(host, 1500));
+    }
+
+    [Theory(DisplayName = "慢通道接受规格支持的刷新周期")]
+    [InlineData(3000)]
+    [InlineData(5000)]
+    public void Slow_sampling_accepts_each_supported_interval(int milliseconds)
+    {
+        var host = new MetricsShellHost(
+            new SequenceSystemMetricsSource([], memoryReading: null),
+            new SequenceSlowMetricsSource(gpuReading: null, cpuTemperatureCelsius: null));
+
+        var shell = new StartupShellController(host, slowRefreshMilliseconds: milliseconds);
+        shell.Start();
+        shell.SelectMenuItem(ShellMenuAction.Exit);
+    }
+
+    [Fact(DisplayName = "慢通道拒绝规格以外的刷新周期")]
+    public void Slow_sampling_rejects_unsupported_intervals()
+    {
+        var host = new MetricsShellHost(
+            new SequenceSystemMetricsSource([], memoryReading: null),
+            new SequenceSlowMetricsSource(gpuReading: null, cpuTemperatureCelsius: null));
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => new StartupShellController(host, slowRefreshMilliseconds: 4000));
     }
 
     private sealed class MetricsShellHost(
@@ -316,6 +418,88 @@ public sealed class PerformanceMetricsContractTests
         {
             Interlocked.Increment(ref _temperatureReadCount);
             return Task.FromResult(cpuTemperatureCelsius);
+        }
+    }
+
+    private sealed class FailingGpuSlowMetricsSource(int? cpuTemperatureCelsius) : ISlowMetricsSource
+    {
+        private int _gpuReadCount;
+
+        public int GpuReadCount => Volatile.Read(ref _gpuReadCount);
+
+        public Task<GpuMetricsReading?> ReadGpuMetricsAsync(CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref _gpuReadCount);
+            throw new InvalidOperationException("模拟 nvidia-smi 不可用。");
+        }
+
+        public Task<int?> ReadCpuTemperatureCelsiusAsync(CancellationToken cancellationToken) =>
+            Task.FromResult(cpuTemperatureCelsius);
+    }
+
+    private sealed class FailingTemperatureSlowMetricsSource(GpuMetricsReading? gpuReading) : ISlowMetricsSource
+    {
+        public Task<GpuMetricsReading?> ReadGpuMetricsAsync(CancellationToken cancellationToken) =>
+            Task.FromResult(gpuReading);
+
+        public Task<int?> ReadCpuTemperatureCelsiusAsync(CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("模拟 ACPI/WMI 无数据或访问失败。");
+    }
+
+    private sealed class BlockingSlowMetricsSource : ISlowMetricsSource
+    {
+        private readonly TaskCompletionSource _firstGpuReadStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource _releaseFirstGpuRead = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private int _gpuReadCount;
+        private int _activeGpuReads;
+        private int _maximumConcurrentGpuReads;
+        private CancellationToken _firstGpuCancellationToken;
+
+        public Task FirstGpuReadStarted => _firstGpuReadStarted.Task;
+
+        public int GpuReadCount => Volatile.Read(ref _gpuReadCount);
+
+        public int MaximumConcurrentGpuReads => Volatile.Read(ref _maximumConcurrentGpuReads);
+
+        public CancellationToken FirstGpuCancellationToken => _firstGpuCancellationToken;
+
+        public async Task<GpuMetricsReading?> ReadGpuMetricsAsync(CancellationToken cancellationToken)
+        {
+            var active = Interlocked.Increment(ref _activeGpuReads);
+            UpdateMaximum(active);
+            var call = Interlocked.Increment(ref _gpuReadCount);
+            try
+            {
+                if (call == 1)
+                {
+                    _firstGpuCancellationToken = cancellationToken;
+                    _firstGpuReadStarted.TrySetResult();
+                    await _releaseFirstGpuRead.Task.ConfigureAwait(false);
+                }
+
+                return new GpuMetricsReading(call == 1 ? 11 : 22, 30, 50);
+            }
+            finally
+            {
+                Interlocked.Decrement(ref _activeGpuReads);
+            }
+        }
+
+        public Task<int?> ReadCpuTemperatureCelsiusAsync(CancellationToken cancellationToken) =>
+            Task.FromResult<int?>(null);
+
+        public void ReleaseFirstGpuRead() => _releaseFirstGpuRead.TrySetResult();
+
+        private void UpdateMaximum(int value)
+        {
+            while (true)
+            {
+                var current = Volatile.Read(ref _maximumConcurrentGpuReads);
+                if (value <= current || Interlocked.CompareExchange(ref _maximumConcurrentGpuReads, value, current) == current)
+                {
+                    return;
+                }
+            }
         }
     }
 

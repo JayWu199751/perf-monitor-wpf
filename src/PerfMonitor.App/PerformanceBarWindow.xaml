@@ -25,7 +25,10 @@
                    TextOptions.TextFormattingMode="Display">
             <Run Text="CPU " /><Run Text="{Binding CpuPercentageText, Mode=OneWay}" FontWeight="SemiBold" />
             <Run Text="  ·  内存 " /><Run Text="{Binding MemoryPercentageText, Mode=OneWay}" FontWeight="SemiBold" />
-            <Run Text="  ·  GPU " /><Run Text="--%" FontWeight="SemiBold" />
+            <Run Text="  ·  GPU " /><Run Text="{Binding GpuPercentageText, Mode=OneWay}" FontWeight="SemiBold" />
+            <Run Text="  ·  显存 " /><Run Text="{Binding GpuMemoryPercentageText, Mode=OneWay}" FontWeight="SemiBold" />
+            <Run Text="  ·  GPU温度 " /><Run Text="{Binding GpuTemperatureText, Mode=OneWay}" FontWeight="SemiBold" />
+            <Run Text="  ·  ACPI " /><Run Text="{Binding CpuTemperatureText, Mode=OneWay}" FontWeight="SemiBold" />
             <Run Text="  ·  网络 " /><Run Text="--" FontWeight="SemiBold" />
         </TextBlock>
     </Border>
