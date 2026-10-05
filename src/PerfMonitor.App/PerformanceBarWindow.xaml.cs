@@ -13,7 +13,7 @@ public partial class PerformanceBarWindow : Window
         _requestNativeMove = requestNativeMove;
         InitializeComponent();
 
-        // 分层窗口的 alpha=0 像素会穿透输入；alpha=1 保留近透明外观并接收命中。
+        // 分层窗口中，Alpha=0 的完全透明像素会穿透输入；Alpha=1 保持近透明外观并接收命中。
         Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(1, 0, 0, 0));
     }
 

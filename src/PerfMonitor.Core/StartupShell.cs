@@ -1,3 +1,5 @@
+using PerfMonitor.Core.Metrics;
+
 namespace PerfMonitor.Core.Shell;
 
 public enum ShellMenuOrigin
@@ -27,6 +29,8 @@ public interface IStartupShellHost
 
     void BeginPerformanceBarNativeMove();
 
+    ISystemMetricsSource? SystemMetricsSource { get; }
+
     void ShowPerformanceBar(bool activate);
 
     void SetPerformanceBarVisible(bool visible, bool activate);
@@ -42,6 +46,10 @@ public interface IStartupShellHost
 
     void HideSettingsWindow();
 
+    void SetMetricGeneration(long generation);
+
+    void UpdatePerformanceMetrics(PerformanceMetricsSnapshot snapshot);
+
     void Shutdown();
 }
 
@@ -54,11 +62,19 @@ public sealed class StartupShellController
     ]);
 
     private readonly IStartupShellHost _host;
+    private readonly PerformanceMetricsSampler? _metricsSampler;
+    private long _metricsGeneration;
 
-    public StartupShellController(IStartupShellHost host)
+    public StartupShellController(
+        IStartupShellHost host,
+        int fastRefreshMilliseconds = PerformanceMetricsSampler.DefaultFastRefreshMilliseconds)
     {
         _host = host;
         _host.SetPerformanceBarMoveRequestHandler(OnPerformanceBarNativeMoveRequested);
+        if (host.SystemMetricsSource is { } source)
+        {
+            _metricsSampler = new PerformanceMetricsSampler(source, PublishMetrics, fastRefreshMilliseconds);
+        }
     }
 
     public StartupShellState State { get; private set; } = new(false, false, false, false, false);
@@ -73,6 +89,7 @@ public sealed class StartupShellController
         _host.ShowPerformanceBar(activate: false);
         _host.CreateTrayIcon(OnTrayLeftClick, OnTrayRightClick);
         State = new(true, true, true, false, false);
+        StartMetricSampling();
     }
 
     public void SelectMenuItem(ShellMenuAction action)
@@ -93,6 +110,7 @@ public sealed class StartupShellController
                 };
                 break;
             case ShellMenuAction.Exit:
+                StopMetricSampling();
                 State = new(false, false, false, false, false);
                 _host.Shutdown();
                 break;
@@ -135,6 +153,14 @@ public sealed class StartupShellController
         var visible = !State.IsPerformanceBarVisible;
         _host.SetPerformanceBarVisible(visible, activate: visible);
         State = State with { IsPerformanceBarVisible = visible };
+        if (visible)
+        {
+            StartMetricSampling();
+        }
+        else
+        {
+            StopMetricSampling();
+        }
     }
 
     private void OnTrayRightClick()
@@ -150,5 +176,29 @@ public sealed class StartupShellController
         }
 
         _host.ShowContextMenu(origin, BasicMenuItems, SelectMenuItem);
+    }
+
+    private void StartMetricSampling()
+    {
+        _metricsSampler?.Start(SetMetricGeneration);
+    }
+
+    private void StopMetricSampling()
+    {
+        _metricsSampler?.Stop(SetMetricGeneration);
+    }
+
+    private void SetMetricGeneration(long generation)
+    {
+        Interlocked.Exchange(ref _metricsGeneration, generation);
+        _host.SetMetricGeneration(generation);
+    }
+
+    private void PublishMetrics(PerformanceMetricsSnapshot snapshot)
+    {
+        if (snapshot.Generation == Interlocked.Read(ref _metricsGeneration))
+        {
+            _host.UpdatePerformanceMetrics(snapshot);
+        }
     }
 }

@@ -1,4 +1,5 @@
 using PerfMonitor.Core.Shell;
+using PerfMonitor.Core.Metrics;
 
 namespace PerfMonitor.Core.Tests;
 
@@ -141,6 +142,8 @@ public sealed class StartupShellContractTests
         private Action<ShellMenuAction>? _selectMenuItem;
         private Action? _performanceBarMoveRequestHandler;
 
+        public ISystemMetricsSource? SystemMetricsSource => null;
+
         public List<(bool Visible, bool Activate)> VisibilityChanges { get; } = [];
 
         public List<(ShellMenuOrigin Origin, IReadOnlyList<ShellMenuItem> Items)> ContextMenus { get; } = [];
@@ -212,6 +215,14 @@ public sealed class StartupShellContractTests
         public void HideSettingsWindow()
         {
             SettingsWindowHideCount++;
+        }
+
+        public void SetMetricGeneration(long generation)
+        {
+        }
+
+        public void UpdatePerformanceMetrics(PerformanceMetricsSnapshot snapshot)
+        {
         }
 
         public void Shutdown()
