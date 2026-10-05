@@ -89,6 +89,37 @@ public sealed class WindowsScheduledTaskAutostartTests
         }
     }
 
+    [Fact(DisplayName = "大输出量下子进程管道读取不死锁，按退出码判定结果")]
+    public void Large_output_on_both_pipes_does_not_deadlock()
+    {
+        // 注入假 schtasks（.cmd 由 CreateProcess 经 cmd.exe 执行）：
+        // stdout 与 stderr 各输出远超管道缓冲（4KB）的文本后返回 1
+        //（查询报不存在 → Disable 直接返回 Disabled）。
+        // 若读取死锁，15 秒超时会转成 Failed，可与预期 Disabled 区分。
+        var scriptPath = Path.Combine(Path.GetTempPath(), "PerfMonitorWpf." + Guid.NewGuid().ToString("N") + ".cmd");
+        File.WriteAllText(scriptPath, """
+            @echo off
+            for /L %%i in (1,1,2000) do (
+              @echo stdout-line-%%i-simulation-padding-payload
+              @echo stderr-line-%%i-simulation-padding-payload 1>&2
+            )
+            exit /b 1
+            """);
+        try
+        {
+            var autostart = new WindowsScheduledTaskAutostart(
+                taskName: "PerfMonitorWpf.FakeSchtasksTest",
+                executablePath: Environment.ProcessPath,
+                schtasksPath: scriptPath);
+
+            Assert.Equal(AutostartRequestOutcome.Disabled, autostart.TrySetEnabled(false));
+        }
+        finally
+        {
+            File.Delete(scriptPath);
+        }
+    }
+
     private static bool CanRunSchtasks()
     {
         try

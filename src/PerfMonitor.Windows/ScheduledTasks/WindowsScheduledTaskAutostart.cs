@@ -167,14 +167,18 @@ public sealed class WindowsScheduledTaskAutostart : IAutostartPort
 
         using var process = Process.Start(startInfo)
             ?? throw new InvalidOperationException("无法启动 schtasks.exe。");
-        var output = process.StandardOutput.ReadToEnd();
-        var error = process.StandardError.ReadToEnd();
+        // 先并发启动两个管道的异步读取再等待退出：若先同步读 stdout，
+        // 大量 stderr 输出会填满管道使子进程写阻塞，造成双向等待死锁。
+        var outputTask = process.StandardOutput.ReadToEndAsync();
+        var errorTask = process.StandardError.ReadToEndAsync();
         if (!process.WaitForExit(TimeoutMilliseconds))
         {
             process.Kill(entireProcessTree: true);
             throw new InvalidOperationException("schtasks.exe 执行超时。");
         }
 
+        var output = outputTask.GetAwaiter().GetResult();
+        var error = errorTask.GetAwaiter().GetResult();
         if (process.ExitCode != 0)
         {
             Trace.WriteLine($"schtasks 返回 {process.ExitCode}：{error}{output}");
