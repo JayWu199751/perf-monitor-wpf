@@ -30,6 +30,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="PerfMonitor.App.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\PerfMonitor.Core\PerfMonitor.Core.csproj" />
     <ProjectReference Include="..\..\src\PerfMonitor.Windows\PerfMonitor.Windows.csproj" />
   </ItemGroup>

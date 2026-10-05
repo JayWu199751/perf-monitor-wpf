@@ -61,8 +61,10 @@ public static class TaskbarRowRules
     }
 
     /// <summary>
-    /// 行内落位结算：卡片中心位于某行内（左闭右开）时垂直居中到该行并叠加对应顶/底贴边；
-    /// centerInRow 开启时再弹回整行水平中心；行外原样返回普通贴边结果。
+    /// 行内落位结算：以结算前框架（用户松手位置）的中心位于某行内（左闭右开）、
+    /// 且贴边结算已满足对应顶/底贴边落点为前提，垂直居中到该行；
+    /// centerInRow 开启时再弹回整行水平中心。
+    /// 不满足前提时返回 (frame, settledDocked, false)，由调用方回落普通贴边结果。
     /// </summary>
     public static (PlacementRect Frame, DockedEdges Docked, bool InRow) SettleRowPlacement(
         PlacementRect frame,
@@ -74,18 +76,18 @@ public static class TaskbarRowRules
         foreach (var row in rows)
         {
             var rect = row.Rect;
+            var rowEdge = row.Kind == TaskbarRowKind.Top ? DockedEdges.Top : DockedEdges.Bottom;
             var isInRow = frame.CenterX >= rect.X && frame.CenterX < rect.Right &&
                 frame.CenterY >= rect.Y && frame.CenterY < rect.Bottom;
-            if (!isInRow)
+            // 规格 F08：行内垂直居中需同时满足中心在行内与对应顶/底贴边落点。
+            if (!isInRow || (settledDocked & rowEdge) == 0)
             {
                 continue;
             }
 
-            var rowEdge = row.Kind == TaskbarRowKind.Top ? DockedEdges.Top : DockedEdges.Bottom;
-            var docked = settledDocked | rowEdge;
             var x = centerInRow ? rect.CenterX - frame.Width / 2 : frame.X;
             var y = rect.Y + (rect.Height - frame.Height) / 2;
-            return (frame with { X = x, Y = y }, docked, true);
+            return (frame with { X = x, Y = y }, settledDocked, true);
         }
 
         return (frame, settledDocked, false);

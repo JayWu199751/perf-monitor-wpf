@@ -86,39 +86,39 @@ public sealed class TaskbarRowRulesTests
         Assert.Empty(TaskbarRowRules.DeriveRows(display));
     }
 
-    [Fact(DisplayName = "拖入底部行松手后垂直居中到行且横向跟随拖动")]
+    [Fact(DisplayName = "拖入底部行且满足底贴边落点时垂直居中到行且横向跟随拖动")]
     public void Settling_inside_the_bottom_row_centers_vertically_and_keeps_dragged_x()
     {
         var frame = new PlacementRect(100, 1050, 200, 40);
 
         var (settled, docked, inRow) = TaskbarRowRules.SettleRowPlacement(
-            frame, BottomTaskbarDisplay, DockedEdges.None, centerInRow: false);
+            frame, BottomTaskbarDisplay, DockedEdges.Bottom, centerInRow: false);
 
         Assert.True(inRow);
         Assert.Equal(new PlacementRect(100, 1040, 200, 40), settled);
         Assert.Equal(DockedEdges.Bottom, docked);
     }
 
-    [Fact(DisplayName = "拖入顶部行松手后垂直居中到行并置顶贴边")]
+    [Fact(DisplayName = "拖入顶部行且满足顶贴边落点时垂直居中到行并置顶贴边")]
     public void Settling_inside_the_top_row_centers_vertically_and_docks_top()
     {
         var frame = new PlacementRect(100, 20, 200, 40);
 
         var (settled, docked, inRow) = TaskbarRowRules.SettleRowPlacement(
-            frame, TopTaskbarDisplay, DockedEdges.None, centerInRow: false);
+            frame, TopTaskbarDisplay, DockedEdges.Top, centerInRow: false);
 
         Assert.True(inRow);
         Assert.Equal(new PlacementRect(100, 4, 200, 40), settled);
         Assert.Equal(DockedEdges.Top, docked);
     }
 
-    [Fact(DisplayName = "行内居中开启时松手弹回整行水平中心")]
+    [Fact(DisplayName = "行内居中开启且满足贴边落点时松手弹回整行水平中心")]
     public void Center_in_row_snaps_the_card_back_to_the_horizontal_center()
     {
         var frame = new PlacementRect(100, 1050, 200, 40);
 
         var (settled, docked, inRow) = TaskbarRowRules.SettleRowPlacement(
-            frame, BottomTaskbarDisplay, DockedEdges.None, centerInRow: true);
+            frame, BottomTaskbarDisplay, DockedEdges.Bottom, centerInRow: true);
 
         Assert.True(inRow);
         Assert.Equal(new PlacementRect(860, 1040, 200, 40), settled);
@@ -131,7 +131,7 @@ public sealed class TaskbarRowRulesTests
         var frame = new PlacementRect(16, 1050, 200, 40);
 
         var (_, docked, inRow) = TaskbarRowRules.SettleRowPlacement(
-            frame, BottomTaskbarDisplay, DockedEdges.Left, centerInRow: false);
+            frame, BottomTaskbarDisplay, DockedEdges.Left | DockedEdges.Bottom, centerInRow: false);
 
         Assert.True(inRow);
         Assert.Equal(DockedEdges.Left | DockedEdges.Bottom, docked);
@@ -150,6 +150,32 @@ public sealed class TaskbarRowRulesTests
         Assert.Equal(DockedEdges.Left, docked);
     }
 
+    [Fact(DisplayName = "中心途经行带但未满足对应贴边落点时不落位")]
+    public void Passing_through_the_row_band_without_the_matching_edge_does_not_settle_in_row()
+    {
+        var frame = new PlacementRect(100, 1050, 200, 40);
+
+        var (settled, docked, inRow) = TaskbarRowRules.SettleRowPlacement(
+            frame, BottomTaskbarDisplay, DockedEdges.None, centerInRow: true);
+
+        Assert.False(inRow);
+        Assert.Equal(frame, settled);
+        Assert.Equal(DockedEdges.None, docked);
+    }
+
+    [Fact(DisplayName = "顶行落位要求顶贴边前提，仅有对向贴边不满足")]
+    public void Top_row_settlement_requires_the_top_edge_not_the_opposite_edge()
+    {
+        var frame = new PlacementRect(100, 20, 200, 40);
+
+        var (settled, docked, inRow) = TaskbarRowRules.SettleRowPlacement(
+            frame, TopTaskbarDisplay, DockedEdges.Bottom, centerInRow: false);
+
+        Assert.False(inRow);
+        Assert.Equal(frame, settled);
+        Assert.Equal(DockedEdges.Bottom, docked);
+    }
+
     [Theory(DisplayName = "行内判定按中心纵坐标左闭右开")]
     [InlineData(1040, true)]
     [InlineData(1045, true)]
@@ -161,7 +187,7 @@ public sealed class TaskbarRowRulesTests
         var frame = new PlacementRect(100, centerY - 20, 200, 40);
 
         var (_, _, inRow) = TaskbarRowRules.SettleRowPlacement(
-            frame, BottomTaskbarDisplay, DockedEdges.None, centerInRow: false);
+            frame, BottomTaskbarDisplay, DockedEdges.Bottom, centerInRow: false);
 
         Assert.Equal(expectedInRow, inRow);
     }
@@ -172,7 +198,7 @@ public sealed class TaskbarRowRulesTests
         var frame = new PlacementRect(1800, 1050, 200, 40);
 
         var (settled, _, inRow) = TaskbarRowRules.SettleRowPlacement(
-            frame, BottomTaskbarDisplay, DockedEdges.None, centerInRow: true);
+            frame, BottomTaskbarDisplay, DockedEdges.Bottom, centerInRow: true);
 
         Assert.True(inRow);
         Assert.Equal(860, settled.X);

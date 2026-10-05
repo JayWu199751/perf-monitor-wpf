@@ -384,8 +384,15 @@ public sealed class StartupShellController : IDisposable
         }
 
         var next = Settings.Apply(patch);
-        if (patch.Autostart is { } requestedAutostart && _autostartPort is { } autostartPort)
+        if (patch.Autostart is { } requestedAutostart)
         {
+            if (_autostartPort is not { } autostartPort)
+            {
+                // 端口不可用（Debug 构建等）时自启无法在系统中生效，按失败路径处理：
+                // 不发布新 Settings、不持久化，与「失败不显示成功」语义一致。
+                throw new InvalidOperationException("当前环境不支持开机自启，已保留原设置。");
+            }
+
             var outcome = autostartPort.TrySetEnabled(requestedAutostart);
             if (outcome == AutostartRequestOutcome.Failed)
             {
@@ -601,9 +608,15 @@ public sealed class StartupShellController : IDisposable
         }
     }
 
-    private void OnTaskbarGuardFastTick(object? state)
+    private void OnTaskbarGuardFastTick(object? state) =>
+        RunTaskbarGuardTick(static guard => guard.EnsureAboveTaskbar());
+
+    private void OnTaskbarGuardSlowTick(object? state) =>
+        RunTaskbarGuardTick(static guard => guard.RefreshTaskbarHandles());
+
+    private void RunTaskbarGuardTick(Action<ITaskbarVisibilityGuardPort> tick)
     {
-        // 隐藏、退出或原生拖动期间跳过遮挡检查；隐藏态由 StopTaskbarGuard 直接停表。
+        // 隐藏、退出或原生拖动期间跳过；隐藏态由 StopTaskbarGuard 直接停表。
         if (_disposed || !State.IsRunning || !State.IsPerformanceBarVisible || _isPerformanceBarNativeMoveActive)
         {
             return;
@@ -611,23 +624,10 @@ public sealed class StartupShellController : IDisposable
 
         try
         {
-            _taskbarGuard?.EnsureAboveTaskbar();
-        }
-        catch (ObjectDisposedException)
-        {
-        }
-    }
-
-    private void OnTaskbarGuardSlowTick(object? state)
-    {
-        if (_disposed || !State.IsRunning || !State.IsPerformanceBarVisible || _isPerformanceBarNativeMoveActive)
-        {
-            return;
-        }
-
-        try
-        {
-            _taskbarGuard?.RefreshTaskbarHandles();
+            if (_taskbarGuard is { } guard)
+            {
+                tick(guard);
+            }
         }
         catch (ObjectDisposedException)
         {
@@ -737,12 +737,14 @@ public sealed class StartupShellController : IDisposable
                 resolved,
                 LastPlacementSnapshot().Docked,
                 PlacementInsets.Zero);
-            // 行内落点：中心在顶/底任务栏行内时垂直居中到行，行外回落普通贴边结果。
-            var (settled, docked, inRow) = TaskbarRowRules.SettleRowPlacement(
-                snapped,
+            // 行内落点：以结算前框架的中心与对应贴边落点判定（规格 F08）；
+            // 不满足前提时回落普通贴边结算结果。
+            var (rowSettled, rowDocked, inRow) = TaskbarRowRules.SettleRowPlacement(
+                frame,
                 resolved,
                 snappedDocked,
                 Settings.CenterInTaskbarRow);
+            var (settled, docked) = inRow ? (rowSettled, rowDocked) : (snapped, snappedDocked);
             if (settled.X != frame.X || settled.Y != frame.Y)
             {
                 port.SetFramePosition(settled.X, settled.Y);
@@ -826,14 +828,7 @@ public sealed class StartupShellController : IDisposable
 
         if (_metricsSampler is null)
         {
-            if (_slowMetricsSampler is null)
-            {
-                return;
-            }
-
-            var generation = Interlocked.Increment(ref _metricsGeneration);
-            SetMetricGeneration(generation);
-            _slowMetricsSampler.Start(generation);
+            RunSlowOnlyMetricsSampling(static (sampler, generation) => sampler.Start(generation));
             return;
         }
 
@@ -872,19 +867,25 @@ public sealed class StartupShellController : IDisposable
     {
         if (_metricsSampler is null)
         {
-            if (_slowMetricsSampler is null)
-            {
-                return;
-            }
-
-            var generation = Interlocked.Increment(ref _metricsGeneration);
-            SetMetricGeneration(generation);
-            _slowMetricsSampler.Stop(generation);
+            RunSlowOnlyMetricsSampling(static (sampler, generation) => sampler.Stop(generation));
             return;
         }
 
         var currentGeneration = _metricsSampler.Stop(SetMetricGeneration);
         _slowMetricsSampler?.Stop(currentGeneration);
+    }
+
+    /// <summary>仅有慢指标采样器时的启停：推进代数并交给慢采样器执行。</summary>
+    private void RunSlowOnlyMetricsSampling(Action<PerformanceSlowMetricsSampler, long> run)
+    {
+        if (_slowMetricsSampler is null)
+        {
+            return;
+        }
+
+        var generation = Interlocked.Increment(ref _metricsGeneration);
+        SetMetricGeneration(generation);
+        run(_slowMetricsSampler, generation);
     }
 
     private void SetMetricGeneration(long generation)

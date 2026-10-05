@@ -72,18 +72,22 @@ public sealed class AutostartContractTests
         Assert.False(store.LastSaved!.Autostart);
     }
 
-    [Fact(DisplayName = "没有端口时仅持久化请求值，不触碰系统自启")]
-    public void Without_a_port_the_requested_value_is_persisted_without_touching_the_system()
+    [Fact(DisplayName = "端口不可用时自启补丁视为失败，不保存不发布")]
+    public void Without_a_port_an_autostart_patch_is_treated_as_failed_and_not_persisted()
     {
         var store = new RecordingSettingsStore(PerformanceSettings.Default);
         var host = new AutostartRecordingHost(store);
         var shell = new StartupShellController(host);
         shell.Start();
+        var appliedOnStart = host.AppliedSettings;
 
-        var saved = shell.UpdateSettings(new SettingsPatch { Autostart = true });
+        Assert.Throws<InvalidOperationException>(
+            () => shell.UpdateSettings(new SettingsPatch { Autostart = true }));
 
-        Assert.True(saved.Autostart);
-        Assert.True(store.LastSaved!.Autostart);
+        Assert.Null(store.LastSaved);
+        Assert.False(shell.Settings.Autostart);
+        // 失败路径不发布新 Settings（与工票 13「失败不显示成功」语义一致）。
+        Assert.Same(appliedOnStart, host.AppliedSettings);
     }
 
     private sealed class RecordingSettingsStore : ISettingsStore

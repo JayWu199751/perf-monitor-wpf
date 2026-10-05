@@ -204,7 +204,7 @@ public sealed class PerformanceBarPlacementContractTests
     [Fact(DisplayName = "拖入底部任务栏行松手后垂直居中到行且横向跟随拖动")]
     public async Task Dropping_into_the_bottom_taskbar_row_centers_vertically_and_keeps_dragged_x()
     {
-        var store = new RecordingPlacementStore(PerformanceSettings.Default);
+        var store = new RecordingPlacementStore(BottomDockedSettings());
         var displays = new FakeDisplaySource([BottomTaskbarDisplay]);
         var host = new RecordingPlacementHost(store, displays)
         {
@@ -246,7 +246,7 @@ public sealed class PerformanceBarPlacementContractTests
     [Fact(DisplayName = "开启行内居中立即结算一次并弹回整行水平中心")]
     public void Enabling_row_centering_settles_once_back_to_the_row_center()
     {
-        var store = new RecordingPlacementStore(PerformanceSettings.Default);
+        var store = new RecordingPlacementStore(BottomDockedSettings());
         var displays = new FakeDisplaySource([BottomTaskbarDisplay]);
         var host = new RecordingPlacementHost(store, displays)
         {
@@ -306,7 +306,7 @@ public sealed class PerformanceBarPlacementContractTests
     [Fact(DisplayName = "卡片驻留任务栏行内时运行可见性守卫并按慢周期刷新句柄")]
     public async Task Residing_in_the_taskbar_row_runs_the_visibility_guard()
     {
-        var store = new RecordingPlacementStore(PerformanceSettings.Default);
+        var store = new RecordingPlacementStore(BottomDockedSettings());
         var displays = new FakeDisplaySource([BottomTaskbarDisplay]);
         var host = new RecordingPlacementHost(store, displays)
         {
@@ -353,7 +353,7 @@ public sealed class PerformanceBarPlacementContractTests
     [Fact(DisplayName = "隐藏性能条后守卫停止")]
     public async Task Hiding_the_performance_bar_stops_the_guard()
     {
-        var store = new RecordingPlacementStore(PerformanceSettings.Default);
+        var store = new RecordingPlacementStore(BottomDockedSettings());
         var displays = new FakeDisplaySource([BottomTaskbarDisplay]);
         var host = new RecordingPlacementHost(store, displays)
         {
@@ -376,6 +376,15 @@ public sealed class PerformanceBarPlacementContractTests
         Assert.Equal(countWhenHidden, host.TaskbarGuard.EnsureAboveTaskbarCount);
         Assert.Equal(1, host.TaskbarGuard.GuardStopCount);
     }
+
+    /// <summary>
+    /// 底部贴边前提的初始设置：行内落位要求卡片已满足对应贴边落点（规格 F08），
+    /// 这些用例模拟「先贴底边、再拖入任务栏行」的路径。
+    /// </summary>
+    private static PerformanceSettings BottomDockedSettings() => PerformanceSettings.Default with
+    {
+        Widget = new WidgetPlacement { X = 24, Y = 24, Docked = DockedEdges.Bottom }
+    };
 
     private static async Task WaitAsync(Func<bool> condition)
     {

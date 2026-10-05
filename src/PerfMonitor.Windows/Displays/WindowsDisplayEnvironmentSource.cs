@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using PerfMonitor.Core.Shell;
+using SharedNativeMethods = PerfMonitor.Windows.Native.NativeMethods;
 
 namespace PerfMonitor.Windows.Displays;
 
@@ -13,7 +14,6 @@ public sealed class WindowsDisplayEnvironmentSource : IDisplayEnvironmentSource,
 {
     private const int WmSettingChange = 0x001A;
     private const int WmDisplayChange = 0x007E;
-    private const int MonitorDefaultToNearest = 2;
     private const uint WsOverlapped = 0x00000000;
 
     private static readonly object ClassSync = new();
@@ -38,13 +38,13 @@ public sealed class WindowsDisplayEnvironmentSource : IDisplayEnvironmentSource,
         }
 
         var displays = new List<DisplayInformation>();
-        var callback = new MonitorEnumProc((nint monitor, nint hdc, ref NativeRect rect, nint data) =>
+        var callback = new MonitorEnumProc((nint monitor, nint hdc, ref SharedNativeMethods.NativeRect rect, nint data) =>
         {
-            var info = new MonitorInfo
+            var info = new SharedNativeMethods.MonitorInfoW
             {
-                CbSize = (uint)Marshal.SizeOf<MonitorInfo>()
+                CbSize = (uint)Marshal.SizeOf<SharedNativeMethods.MonitorInfoW>()
             };
-            if (NativeMethods.GetMonitorInfo(monitor, ref info))
+            if (SharedNativeMethods.GetMonitorInfoW(monitor, ref info))
             {
                 displays.Add(new DisplayInformation(
                     ToPlacementRect(info.RcMonitor),
@@ -89,7 +89,8 @@ public sealed class WindowsDisplayEnvironmentSource : IDisplayEnvironmentSource,
     {
         try
         {
-            return NativeMethods.GetDpiForMonitor(monitor, 0, out var dpiX, out _) && dpiX > 0
+            return SharedNativeMethods.GetDpiForMonitor(
+                monitor, SharedNativeMethods.DpiEffective, out var dpiX, out _) && dpiX > 0
                 ? dpiX / 96.0
                 : 1.0;
         }
@@ -100,7 +101,7 @@ public sealed class WindowsDisplayEnvironmentSource : IDisplayEnvironmentSource,
         }
     }
 
-    private static PlacementRect ToPlacementRect(NativeRect rect) => new(
+    private static PlacementRect ToPlacementRect(SharedNativeMethods.NativeRect rect) => new(
         rect.Left,
         rect.Top,
         rect.Right - rect.Left,
@@ -168,31 +169,7 @@ public sealed class WindowsDisplayEnvironmentSource : IDisplayEnvironmentSource,
         return NativeMethods.DefWindowProcW(window, message, wParam, lParam);
     }
 
-    private delegate bool MonitorEnumProc(nint monitor, nint hdc, ref NativeRect rect, nint data);
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct NativeRect
-    {
-        public int Left;
-
-        public int Top;
-
-        public int Right;
-
-        public int Bottom;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct MonitorInfo
-    {
-        public uint CbSize;
-
-        public NativeRect RcMonitor;
-
-        public NativeRect RcWork;
-
-        public uint DwFlags;
-    }
+    private delegate bool MonitorEnumProc(nint monitor, nint hdc, ref SharedNativeMethods.NativeRect rect, nint data);
 
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
     private struct WndClassEx
@@ -232,17 +209,6 @@ public sealed class WindowsDisplayEnvironmentSource : IDisplayEnvironmentSource,
             nint clipRect,
             MonitorEnumProc callback,
             nint data);
-
-        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        internal static extern bool GetMonitorInfo(nint monitor, ref MonitorInfo info);
-
-        [DllImport("shcore.dll")]
-        internal static extern bool GetDpiForMonitor(
-            nint monitor,
-            int dpiType,
-            out uint dpiX,
-            out uint dpiY);
 
         [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
         internal static extern ushort RegisterClassExW(ref WndClassEx windowClass);

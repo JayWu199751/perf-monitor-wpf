@@ -1,6 +1,7 @@
 using System.Drawing;
 using System.Runtime.InteropServices;
 using PerfMonitor.Core.Shell;
+using SharedNativeMethods = PerfMonitor.Windows.Native.NativeMethods;
 
 namespace PerfMonitor.Windows.Fullscreen;
 
@@ -28,8 +29,8 @@ public static class FullscreenWindowRules
     {
         "Progman",
         "WorkerW",
-        "Shell_TrayWnd",
-        "Shell_SecondaryTrayWnd"
+        TaskbarClassNames.Tray,
+        TaskbarClassNames.SecondaryTray
     };
 
     public static bool IsExcludedClassName(string className) => ExcludedClassNames.Contains(className);
@@ -61,7 +62,6 @@ public sealed class WindowsFullscreenWatcher : IFullscreenWatcher
 {
     public static readonly TimeSpan DefaultPollInterval = TimeSpan.FromSeconds(1);
 
-    private const uint MonitorDefaultToNearest = 2;
     private const int DwmwaCloaked = 14;
     private const int WindowClassNameMaxLength = 256;
 
@@ -252,18 +252,6 @@ public sealed class WindowsFullscreenWatcher : IFullscreenWatcher
         [DllImport("user32.dll", EntryPoint = "GetWindowLongW")]
         public static extern long GetWindowLong(nint window, int index);
 
-        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
-        private static extern int GetClassName(nint window, System.Text.StringBuilder className, int maxCount);
-
-        [DllImport("user32.dll")]
-        private static extern bool GetWindowRect(nint window, out Rect rectangle);
-
-        [DllImport("user32.dll")]
-        private static extern nint MonitorFromWindow(nint window, uint flags);
-
-        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
-        private static extern bool GetMonitorInfoW(nint monitor, ref MonitorInfo info);
-
         [DllImport("dwmapi.dll")]
         private static extern int DwmGetWindowAttribute(
             nint window,
@@ -273,14 +261,14 @@ public sealed class WindowsFullscreenWatcher : IFullscreenWatcher
 
         public static string GetWindowClassName(nint window)
         {
-            var builder = new System.Text.StringBuilder(WindowClassNameMaxLength);
-            _ = GetClassName(window, builder, builder.Capacity);
-            return builder.ToString();
+            var buffer = new char[WindowClassNameMaxLength];
+            var length = SharedNativeMethods.GetClassName(window, buffer, buffer.Length);
+            return length <= 0 ? string.Empty : new string(buffer, 0, length);
         }
 
         public static bool GetWindowRectangle(nint window, out Rectangle bounds)
         {
-            if (!GetWindowRect(window, out var rectangle))
+            if (!SharedNativeMethods.GetWindowRect(window, out var rectangle))
             {
                 bounds = Rectangle.Empty;
                 return false;
@@ -292,68 +280,33 @@ public sealed class WindowsFullscreenWatcher : IFullscreenWatcher
 
         public static bool TryGetMonitorBounds(nint window, out Rectangle monitorBounds)
         {
-            var monitor = MonitorFromWindow(window, MonitorDefaultToNearest);
+            var monitor = SharedNativeMethods.MonitorFromWindow(
+                window, SharedNativeMethods.MonitorDefaultToNearest);
             if (monitor == nint.Zero)
             {
                 monitorBounds = Rectangle.Empty;
                 return false;
             }
 
-            var info = new MonitorInfo
+            var info = new SharedNativeMethods.MonitorInfoW
             {
-                Size = checked((uint)Marshal.SizeOf<MonitorInfo>())
+                CbSize = checked((uint)Marshal.SizeOf<SharedNativeMethods.MonitorInfoW>())
             };
-            if (!GetMonitorInfoW(monitor, ref info))
+            if (!SharedNativeMethods.GetMonitorInfoW(monitor, ref info))
             {
                 monitorBounds = Rectangle.Empty;
                 return false;
             }
 
             monitorBounds = Rectangle.FromLTRB(
-                info.MonitorLeft,
-                info.MonitorTop,
-                info.MonitorRight,
-                info.MonitorBottom);
+                info.RcMonitor.Left,
+                info.RcMonitor.Top,
+                info.RcMonitor.Right,
+                info.RcMonitor.Bottom);
             return true;
         }
 
         public static bool IsWindowCloaked(nint window) =>
             DwmGetWindowAttribute(window, DwmwaCloaked, out var cloaked, sizeof(int)) == 0 && cloaked != 0;
-
-        [StructLayout(LayoutKind.Sequential)]
-        private struct Rect
-        {
-            public int Left;
-
-            public int Top;
-
-            public int Right;
-
-            public int Bottom;
-        }
-
-        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-        private struct MonitorInfo
-        {
-            public uint Size;
-
-            public int MonitorLeft;
-
-            public int MonitorTop;
-
-            public int MonitorRight;
-
-            public int MonitorBottom;
-
-            public int WorkLeft;
-
-            public int WorkTop;
-
-            public int WorkRight;
-
-            public int WorkBottom;
-
-            public uint Flags;
-        }
     }
 }

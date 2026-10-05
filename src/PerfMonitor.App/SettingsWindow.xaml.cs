@@ -7,6 +7,7 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using PerfMonitor.Core.Settings;
 using PerfMonitor.Core.Shell;
+using SharedNativeMethods = PerfMonitor.Windows.Native.NativeMethods;
 using ComboBox = System.Windows.Controls.ComboBox;
 using Color = System.Windows.Media.Color;
 using Microsoft.Win32;
@@ -44,22 +45,15 @@ public partial class SettingsWindow : Window
         AutostartToggle.IsEnabled = false;
         AutostartDisabledNote.Visibility = Visibility.Visible;
 #endif
-        SynchronizeControls(_currentSettings);
-        ApplyTheme(_currentSettings.Theme);
-        _isSynchronizingControls = false;
+        ResynchronizeControls();
         if (recoveredInvalidSettings)
         {
             ShowStatus("配置损坏，已备份原文件并恢复默认设置", isError: true, persistent: true);
         }
-    }
-
-    public void ApplySettings(PerformanceSettings settings, bool recoveredInvalidSettings)
+    }    public void ApplySettings(PerformanceSettings settings, bool recoveredInvalidSettings)
     {
         _currentSettings = settings.Validate();
-        _isSynchronizingControls = true;
-        SynchronizeControls(_currentSettings);
-        ApplyTheme(_currentSettings.Theme);
-        _isSynchronizingControls = false;
+        ResynchronizeControls();
         if (recoveredInvalidSettings && string.IsNullOrEmpty(SaveStatusText.Text))
         {
             ShowStatus("配置损坏，已备份原文件并恢复默认设置", isError: true, persistent: true);
@@ -168,21 +162,24 @@ public partial class SettingsWindow : Window
         try
         {
             _currentSettings = _updateSettings(patch);
-            _isSynchronizingControls = true;
-            SynchronizeControls(_currentSettings);
-            ApplyTheme(_currentSettings.Theme);
-            _isSynchronizingControls = false;
+            ResynchronizeControls();
             ShowStatus("已保存", isError: false, persistent: false);
         }
         catch (Exception exception)
         {
-            _isSynchronizingControls = true;
-            SynchronizeControls(_currentSettings);
-            ApplyTheme(_currentSettings.Theme);
-            _isSynchronizingControls = false;
+            ResynchronizeControls();
             ShowStatus("保存失败", isError: true, persistent: false);
             System.Diagnostics.Trace.WriteLine($"保存设置失败：{exception}");
         }
+    }
+
+    /// <summary>按最新设置重挂控件与主题；期间抑制控件事件回写。</summary>
+    private void ResynchronizeControls()
+    {
+        _isSynchronizingControls = true;
+        SynchronizeControls(_currentSettings);
+        ApplyTheme(_currentSettings.Theme);
+        _isSynchronizingControls = false;
     }
 
     private void SynchronizeControls(PerformanceSettings settings)
@@ -205,12 +202,7 @@ public partial class SettingsWindow : Window
 
     private void ApplyTheme(BarTheme theme)
     {
-        var dark = theme switch
-        {
-            BarTheme.Dark => true,
-            BarTheme.Light => false,
-            _ => PerformanceBarViewModel.IsDarkSystemTheme()
-        };
+        var dark = PerformanceBarViewModel.IsDarkEffectiveTheme(theme);
         Resources["PageBackgroundBrush"] = CreateBrush(
             dark ? Color.FromRgb(0x11, 0x11, 0x13) : Color.FromRgb(0xF5, 0xF5, 0xF7));
         Resources["SurfaceBrush"] = CreateBrush(
@@ -258,10 +250,18 @@ public partial class SettingsWindow : Window
 
         try
         {
-            var monitor = NativeMethods.MonitorFromWindow(
-                handle, NativeMethods.MonitorDefaultToNearest);
-            if (monitor == nint.Zero
-                || !NativeMethods.GetMonitorInfoW(monitor, out var info))
+            var monitor = SharedNativeMethods.MonitorFromWindow(
+                handle, SharedNativeMethods.MonitorDefaultToNearest);
+            if (monitor == nint.Zero)
+            {
+                return false;
+            }
+
+            var info = new SharedNativeMethods.MonitorInfoW
+            {
+                CbSize = (uint)Marshal.SizeOf<SharedNativeMethods.MonitorInfoW>()
+            };
+            if (!SharedNativeMethods.GetMonitorInfoW(monitor, ref info))
             {
                 return false;
             }
@@ -269,7 +269,8 @@ public partial class SettingsWindow : Window
             var dpiScale = 1.0;
             try
             {
-                if (NativeMethods.GetDpiForMonitor(monitor, NativeMethods.DpiEffective, out var dpiX, out _)
+                if (SharedNativeMethods.GetDpiForMonitor(
+                        monitor, SharedNativeMethods.DpiEffective, out var dpiX, out _)
                     && dpiX > 0)
                 {
                     dpiScale = dpiX / 96.0;
@@ -292,51 +293,6 @@ public partial class SettingsWindow : Window
         {
             return false;
         }
-    }
-
-    private static class NativeMethods
-    {
-        internal const uint MonitorDefaultToNearest = 2;
-
-        internal const int DpiEffective = 0;
-
-        [StructLayout(LayoutKind.Sequential)]
-        internal struct NativeRect
-        {
-            public int Left;
-
-            public int Top;
-
-            public int Right;
-
-            public int Bottom;
-        }
-
-        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-        internal struct MonitorInfoW
-        {
-            public uint CbSize;
-
-            public NativeRect RcMonitor;
-
-            public NativeRect RcWork;
-
-            public uint DwFlags;
-        }
-
-        [DllImport("user32.dll")]
-        internal static extern nint MonitorFromWindow(nint window, uint flags);
-
-        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        internal static extern bool GetMonitorInfoW(nint monitor, out MonitorInfoW info);
-
-        [DllImport("shcore.dll")]
-        internal static extern bool GetDpiForMonitor(
-            nint monitor,
-            int dpiType,
-            out uint dpiX,
-            out uint dpiY);
     }
 
     private void ShowStatus(string message, bool isError, bool persistent)

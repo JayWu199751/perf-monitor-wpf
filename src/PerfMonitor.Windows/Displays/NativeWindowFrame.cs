@@ -1,5 +1,5 @@
-using System.Runtime.InteropServices;
 using PerfMonitor.Core.Shell;
+using NativeMethods = PerfMonitor.Windows.Native.NativeMethods;
 
 namespace PerfMonitor.Windows.Displays;
 
@@ -16,8 +16,8 @@ public static class NativeWindowFrame
 
     public static PlacementRect ReadFrame(nint window)
     {
-        var rect = new NativeRect();
-        return window != nint.Zero && NativeMethods.GetWindowRect(window, ref rect)
+        var rect = new NativeMethods.NativeRect();
+        return window != nint.Zero && NativeMethods.GetWindowRect(window, out rect)
             ? new PlacementRect(rect.Left, rect.Top, rect.Right - rect.Left, rect.Bottom - rect.Top)
             : default;
     }
@@ -37,35 +37,5 @@ public static class NativeWindowFrame
             0,
             0,
             SwpNoSize | SwpNoZOrder | SwpNoActivate | SwpNoOwnerZOrder);
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct NativeRect
-    {
-        public int Left;
-
-        public int Top;
-
-        public int Right;
-
-        public int Bottom;
-    }
-
-    private static class NativeMethods
-    {
-        [DllImport("user32.dll")]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        internal static extern bool GetWindowRect(nint window, ref NativeRect rect);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        internal static extern bool SetWindowPos(
-            nint window,
-            nint insertAfter,
-            int x,
-            int y,
-            int width,
-            int height,
-            uint flags);
     }
 }

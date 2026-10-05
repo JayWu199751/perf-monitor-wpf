@@ -149,17 +149,8 @@ internal sealed class WpfStartupShellHost : IStartupShellHost, IDisposable
     private WindowsScheduledTaskAutostart? _autostartPort;
 #endif
 
-    public void ShowPerformanceBar(bool activate)
-    {
-        EnsurePerformanceBar();
-        _performanceBar!.ShowActivated = activate;
-        _performanceBar.Show();
-
-        if (activate)
-        {
-            _performanceBar.Activate();
-        }
-    }
+    public void ShowPerformanceBar(bool activate) =>
+        SetPerformanceBarVisible(visible: true, activate);
 
     public void SetPerformanceBarVisible(bool visible, bool activate)
     {
@@ -215,12 +206,8 @@ internal sealed class WpfStartupShellHost : IStartupShellHost, IDisposable
         }));
     }
 
-    private bool IsDarkEffectiveTheme() => _currentSettings.Theme switch
-    {
-        BarTheme.Dark => true,
-        BarTheme.Light => false,
-        _ => PerformanceBarViewModel.IsDarkSystemTheme()
-    };
+    private bool IsDarkEffectiveTheme() =>
+        PerformanceBarViewModel.IsDarkEffectiveTheme(_currentSettings.Theme);
 
     private double PerformanceBarDpiScale()
     {
