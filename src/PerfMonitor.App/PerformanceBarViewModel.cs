@@ -255,9 +255,9 @@ public sealed class PerformanceBarViewModel : INotifyPropertyChanged
     {
         ArgumentNullException.ThrowIfNull(settings);
         settings.Validate();
+        // 与主题/不透明度同类：透明显示变化保留峰值宽，不触发自然宽重算。
         var layoutChanged = _settings.FontSize != settings.FontSize
-            || _settings.Metrics != settings.Metrics
-            || _settings.TransparentDisplay != settings.TransparentDisplay;
+            || _settings.Metrics != settings.Metrics;
         _settings = settings;
         UpdateSegmentVisibility();
         UpdateThemeBrushes();
