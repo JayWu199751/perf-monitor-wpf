@@ -1,0 +1,147 @@
+- main [ref=f1e2]:
+  - generic [ref=f1e3]:
+    - generic [ref=f1e9]:
+      - heading "性能小窗" [level=1] [ref=f1e10]
+      - paragraph [ref=f1e11]: C# + WPF 重写 · 桌面交互原型
+    - generic [ref=f1e12]:
+      - generic [ref=f1e13]: 示例数据 / 浏览器模拟
+      - button "重置演示" [ref=f1e14] [cursor=pointer]
+  - generic "原型场景工具" [ref=f1e15]:
+    - group "预览场景" [ref=f1e16]:
+      - button "浮动" [pressed] [ref=f1e17] [cursor=pointer]
+      - button "贴边悬靠" [ref=f1e18] [cursor=pointer]
+      - button "任务栏行内" [ref=f1e19] [cursor=pointer]
+      - button "其他应用全屏" [ref=f1e20] [cursor=pointer]
+    - generic [ref=f1e21]:
+      - generic [ref=f1e22]:
+        - text: 示例数据
+        - combobox "示例数据" [ref=f1e23]:
+          - option "正常负载" [selected]
+          - option "高负载"
+          - option "不可用"
+      - button "右键菜单" [ref=f1e24] [cursor=pointer]
+      - button "打开设置" [ref=f1e25] [cursor=pointer]
+  - generic [ref=f1e26]:
+    - region "桌面模拟" [ref=f1e27]:
+      - generic [ref=f1e28]:
+        - strong [ref=f1e29]: 桌面预览
+        - generic [ref=f1e30]: 拖动小窗可调整位置
+      - generic [ref=f1e31]:
+        - generic [ref=f1e34]: 文件
+        - generic [aria-hidden] [ref=f1e35]:
+          - generic [ref=f1e36]: ♻
+          - generic [ref=f1e37]: 回收站
+        - generic:
+          - strong: 只占视线边缘的一行。
+          - text: 托盘左键显隐，小窗右键打开菜单。数值不可用时保留位置并显示 --。
+        - group "性能小窗，可拖动；按菜单键打开右键菜单" [ref=f1e38]:
+          - generic [ref=f1e39]:
+            - generic "CPU 使用率 / ACPI 热区温度" [ref=f1e40]:
+              - text: CPU
+              - generic [ref=f1e41]: 45%
+              - generic [ref=f1e42]: 67°
+            - generic "内存占用" [ref=f1e44]:
+              - text: 内存
+              - generic [ref=f1e45]: 62%
+            - generic "GPU 使用率 / 显存占用 / 温度" [ref=f1e47]:
+              - text: GPU
+              - generic [ref=f1e48]: 23%
+              - generic [ref=f1e49]: 41%
+              - generic [ref=f1e50]: 61°
+            - generic "下行 / 上行速率" [ref=f1e52]:
+              - text: 网络↓
+              - generic [ref=f1e53]: 12.4MB/s
+              - generic [ref=f1e54]:
+                - text: ↑
+                - generic [ref=f1e55]: 0.8MB/s
+            - generic "本地时间" [ref=f1e57]: 23:43:50
+        - generic "模拟任务栏" [ref=f1e58]:
+          - generic [aria-hidden] [ref=f1e59]:
+            - generic [ref=f1e65]: ⌕ 搜索
+            - generic [ref=f1e70]: ‹›
+          - generic [ref=f1e71]:
+            - generic [aria-hidden] [ref=f1e72]: ⌃
+            - button "性能小窗托盘：左键显隐，右键菜单" [ref=f1e73] [cursor=pointer]
+            - generic [aria-hidden] [ref=f1e78]: ⌁
+            - generic [ref=f1e79]: 14:322026/10/03
+      - generic [ref=f1e80]:
+        - generic [ref=f1e81]: 小窗可见
+        - generic [ref=f1e83]: 自由摆放
+        - generic [ref=f1e84]: 快 1s / 慢 3s
+      - paragraph [ref=f1e85]: 保留原有紧凑单行；切换示例数据可观察缺失态与数字宽度。
+    - complementary "设置窗口预览" [ref=f1e86]:
+      - generic [ref=f1e87]:
+        - strong [ref=f1e88]: 设置窗口
+        - generic [ref=f1e89]: 随改随保存
+      - generic [ref=f1e90]:
+        - generic [ref=f1e91]:
+          - generic [ref=f1e92]: 性能小窗 · 设置
+          - button "隐藏设置窗口" [ref=f1e93] [cursor=pointer]: ×
+        - generic [ref=f1e94]:
+          - heading "设置" [level=2] [ref=f1e95]
+          - generic [ref=f1e96]:
+            - heading "显示指标" [level=3] [ref=f1e97]
+            - generic [ref=f1e98]:
+              - generic [ref=f1e99]: CPU 使用率
+              - checkbox "CPU 使用率" [checked] [ref=f1e101] [cursor=pointer]
+            - generic [ref=f1e102]:
+              - generic [ref=f1e103]: 内存
+              - checkbox "内存" [checked] [ref=f1e105] [cursor=pointer]
+            - generic [ref=f1e106]:
+              - generic [ref=f1e107]: GPU 仅 NVIDIA
+              - checkbox "GPU 仅 NVIDIA" [checked] [ref=f1e109] [cursor=pointer]
+            - generic [ref=f1e110]:
+              - generic [ref=f1e111]: 网络
+              - checkbox "网络" [checked] [ref=f1e113] [cursor=pointer]
+            - generic [ref=f1e114]:
+              - generic [ref=f1e115]: 时间
+              - checkbox "时间" [checked] [ref=f1e117] [cursor=pointer]
+          - generic [ref=f1e118]:
+            - heading "刷新率" [level=3] [ref=f1e119]
+            - generic [ref=f1e120]:
+              - generic [ref=f1e121]: CPU / 内存 / 网络
+              - combobox "CPU / 内存 / 网络" [ref=f1e122]:
+                - option "1s" [selected]
+                - option "2s"
+                - option "5s"
+            - generic [ref=f1e123]:
+              - generic [ref=f1e124]: GPU / 温度
+              - combobox "GPU / 温度" [ref=f1e125]:
+                - option "3s" [selected]
+                - option "5s"
+          - generic [ref=f1e126]:
+            - heading "外观" [level=3] [ref=f1e127]
+            - generic [ref=f1e128]:
+              - generic [ref=f1e129]: 主题
+              - combobox "主题" [ref=f1e130]:
+                - option "跟随系统" [selected]
+                - option "深色"
+                - option "亮色"
+            - generic [ref=f1e131]:
+              - generic [ref=f1e132]:
+                - generic [ref=f1e133]: 背景不透明度
+                - status [ref=f1e134]: 72%
+              - slider "背景不透明度" [ref=f1e135] [cursor=pointer]: "72"
+            - generic [ref=f1e136]:
+              - generic [ref=f1e137]:
+                - generic [ref=f1e138]: 字体大小
+                - status [ref=f1e139]: "12"
+              - slider "字体大小" [ref=f1e140] [cursor=pointer]: "12"
+          - generic [ref=f1e141]:
+            - heading "行为" [level=3] [ref=f1e142]
+            - generic [ref=f1e143]:
+              - generic [ref=f1e144]: 开机自启
+              - checkbox "开机自启" [ref=f1e146] [cursor=pointer]
+            - generic [ref=f1e147]:
+              - generic [ref=f1e148]: 其他应用全屏时自动隐藏
+              - checkbox "其他应用全屏时自动隐藏" [checked] [ref=f1e150] [cursor=pointer]
+        - status [ref=f1e151]
+      - paragraph [ref=f1e152]: 菜单独有开关：透明显示、任务栏内水平居中。
+  - generic [ref=f1e153]:
+    - paragraph [ref=f1e154]: 此页展示外观与交互。数据为固定示例；任务栏、托盘、全屏与拖动均为网页模拟。WPF 的透明合成、DPI、数据采集和系统自启需要原生验证。
+    - generic [ref=f1e155]:
+      - button "导出示例配置" [ref=f1e156] [cursor=pointer]
+      - link "查看功能规格" [ref=f1e157] [cursor=pointer]:
+        - /url: ../spec.md
+  - group [ref=f1e158]:
+    - generic "查看原型状态" [ref=f1e159] [cursor=pointer]

@@ -1,0 +1,590 @@
+{
+  "capturedDate": "2026-10-03",
+  "sourceRoot": "C:\\Users\\10854\\Code\\DesktopPerformanceMonitor",
+  "baselineCommit": "6fc90ed3181fdf6ac71b7e4cde275b2893401547",
+  "basis": "current-working-tree-including-uncommitted-changes",
+  "excludes": [
+    "node_modules",
+    "out",
+    "dist",
+    "temporary diagnostics",
+    "alignment generated JSON and PNG"
+  ],
+  "workingTreeStatus": [
+    " D .scratch/win11-perf-widget/prototype/widget-ui.html",
+    " M CONTEXT.md",
+    " M README.md",
+    " M docs/adr/0005-dock-into-taskbar-row.md",
+    " M electron/README.md",
+    " M electron/src/main/dock.ts",
+    " M electron/src/main/geometry.ts",
+    " M electron/src/main/index.ts",
+    " M electron/src/main/settings.ts",
+    " M electron/src/main/settingsHub.ts",
+    " M electron/src/main/tray.ts",
+    " D electron/src/main/widgetDock.ts",
+    " M electron/src/main/widgetWindow.ts",
+    " M electron/src/main/widgetWindowPorts.ts",
+    " M electron/src/main/window/widget.ts",
+    " M electron/src/renderer/src/lib/cardSize.ts",
+    " M electron/src/renderer/src/widget/WidgetApp.vue",
+    " M electron/src/shared/types.ts",
+    " M electron/tests/cardSize.test.ts",
+    " M electron/tests/dock.test.ts",
+    " M electron/tests/settingsHub.test.ts",
+    " M electron/tests/widgetWindow.test.ts",
+    "?? electron/.floor-probe/"
+  ],
+  "files": [
+    {
+      "source": "AGENTS.md",
+      "sha256": "30fead6c4111deb0128c82aacf4f146318e9d001dd0bf5b277f58e056f9df74d",
+      "bytes": 13696
+    },
+    {
+      "source": "CLAUDE.md",
+      "sha256": "ab7b79a85d0ff6dfe3c57bfb73cefb4b362c2f222e8099d83d502768e054f9e9",
+      "bytes": 268
+    },
+    {
+      "source": "CONTEXT.md",
+      "sha256": "624c00381ed376270323a866e05e161a863083313026a6700b61e1ceacdcecd4",
+      "bytes": 8685
+    },
+    {
+      "source": "docs/adr/0001-window-lifecycle.md",
+      "sha256": "80d10e4164e4adda9be67b0576cc8c7079522b3cb63c346699afd1b6a3c36ecc",
+      "bytes": 2328
+    },
+    {
+      "source": "docs/adr/0002-drag-performance.md",
+      "sha256": "b21011ed226364e0ad2775d14503547ba89d1d33f22f17788a4484a14f0142b3",
+      "bytes": 1450
+    },
+    {
+      "source": "docs/adr/0003-dock-edge-hugging.md",
+      "sha256": "4ec220eae0ac22847959645ce93c09573671e3535cb9a783515d9ddfd8d176ae",
+      "bytes": 2323
+    },
+    {
+      "source": "docs/adr/0004-network-rate-physical-adapters.md",
+      "sha256": "0de86be6b0d25cdbad5d0885d6af060c5b86051d4a1f928c9bc8ba6687bef583",
+      "bytes": 3363
+    },
+    {
+      "source": "docs/adr/0005-dock-into-taskbar-row.md",
+      "sha256": "d49b13aa1edb3273a7e7e31c817cf840035644e926ca2086894d224a6422109e",
+      "bytes": 15037
+    },
+    {
+      "source": "docs/adr/0006-widget-text-optical-centering.md",
+      "sha256": "c5f41c81ceb4a275ae369881e5f960d1267e57ac6968a55a0f1bdc84159da6a5",
+      "bytes": 38111
+    },
+    {
+      "source": "docs/agents/domain.md",
+      "sha256": "be17fa16df544fe16b85d8eca0c3c70ff90aed970795b4f422a400866babae7c",
+      "bytes": 2079
+    },
+    {
+      "source": "docs/agents/issue-tracker.md",
+      "sha256": "fcca76bd956d2dc371b9e78e40af57720cf1ca5de829a707922b7fed8a00bb5f",
+      "bytes": 1903
+    },
+    {
+      "source": "docs/agents/triage-labels.md",
+      "sha256": "f299c78e2682792855c1a387ff4ca98f747f49f2685877c34bc33fde816859ec",
+      "bytes": 1048
+    },
+    {
+      "source": "electron/package.json",
+      "sha256": "845b802dd03ee150130709b7deffbff2f8e488f1b29dcadd313d01893db58b0e",
+      "bytes": 2225
+    },
+    {
+      "source": "electron/README.md",
+      "sha256": "6359a87c29e4c142a961a05f5ee98cfb93785c32996628952fadd969324766f3",
+      "bytes": 10619
+    },
+    {
+      "source": "electron/scripts/alignment/collect.cjs",
+      "sha256": "1edf8194115a77fb787fe737d5ce4be74381402bbffc4f751b9afa7624a837f3",
+      "bytes": 5870
+    },
+    {
+      "source": "electron/scripts/alignment/diff-readout.cjs",
+      "sha256": "6424da9ffd7f46adf102a378816e670664713bf73011955e421200329fe4b663",
+      "bytes": 2420
+    },
+    {
+      "source": "electron/scripts/alignment/fit-rho.cjs",
+      "sha256": "3b1b288620f5e608f1632c86d31ffc3b295f8150737330fb84932a6ee8cdf990",
+      "bytes": 6626
+    },
+    {
+      "source": "electron/scripts/alignment/gate-check.cjs",
+      "sha256": "05e2fa14cbf4fa4c67f867a506cd974593e4f4d64be25ac94eeeb94de3ee759c",
+      "bytes": 1957
+    },
+    {
+      "source": "electron/scripts/alignment/measure.cjs",
+      "sha256": "5a3b1a5ade6454a0f77de59890de2337edf55b6e921ac34e597a6fb2a70ce6f3",
+      "bytes": 40273
+    },
+    {
+      "source": "electron/scripts/alignment/preload.cjs",
+      "sha256": "8a694ed4f310dc8a3a5ca0919185145e9d82d8187cb2468d860e47eeeadf4457",
+      "bytes": 1207
+    },
+    {
+      "source": "electron/scripts/alignment/roles.cjs",
+      "sha256": "1882fde68b221fa2f0d268d4120d66f4731066beac27dd88be804d58db15459a",
+      "bytes": 2285
+    },
+    {
+      "source": "electron/scripts/alignment/roles.d.cts",
+      "sha256": "fda5bdafe639447f363aa43a955078f74444a188f77b8fbd87db4cc76420f8a0",
+      "bytes": 567
+    },
+    {
+      "source": "electron/src/main/autoHide.ts",
+      "sha256": "90abed3415c6256c04de83a245dcd53c42f8814c3422a28c5917206ce2822af9",
+      "bytes": 1408
+    },
+    {
+      "source": "electron/src/main/autostart.ts",
+      "sha256": "676143bfb716d58795c1f2a4c3a377594aacf46d535f5b1d0a8dca360fdc28c6",
+      "bytes": 3806
+    },
+    {
+      "source": "electron/src/main/dock.ts",
+      "sha256": "4afd72197a5badcad8ed4f3d89c6107f37c104c2917af4d02765b74ce5800b6a",
+      "bytes": 12219
+    },
+    {
+      "source": "electron/src/main/elevate.ts",
+      "sha256": "97de51e0a55b3d29b64fac990c50ee9c76f60195c88374eea437614c4843bb2a",
+      "bytes": 2902
+    },
+    {
+      "source": "electron/src/main/foreground.ts",
+      "sha256": "aba0e9c033b45407d80922447cb26e44d478b9d64ab900ea660697282a7c470a",
+      "bytes": 1157
+    },
+    {
+      "source": "electron/src/main/fullscreen.ts",
+      "sha256": "3dcf71637ef17121c0b51ec07e731786d1a4b460077ce0437d4e099abe9b3b64",
+      "bytes": 2078
+    },
+    {
+      "source": "electron/src/main/fullscreenWatcher.ts",
+      "sha256": "1e435896886fa9c639fe3bad5acff7d184c34a0af9f02514c215098a8885aaf9",
+      "bytes": 1352
+    },
+    {
+      "source": "electron/src/main/geometry.ts",
+      "sha256": "ed23f3c99a239eb4e5112643b33a5e7a6505d442c0332cab158aa2b01a407925",
+      "bytes": 1222
+    },
+    {
+      "source": "electron/src/main/index.ts",
+      "sha256": "09ca76ed22cf1431c9a81db99c4ac529added22b263b391de531b2b14e75e895",
+      "bytes": 9788
+    },
+    {
+      "source": "electron/src/main/metrics.ts",
+      "sha256": "a718fd45703568ceb3baca9dbe5818461241a94a72f41b652fa97c286c35c4e1",
+      "bytes": 4138
+    },
+    {
+      "source": "electron/src/main/moveState.ts",
+      "sha256": "9dfe428deba2c51e56afa5203793f04ec61f172e4ef9ee03f4612149d70bff36",
+      "bytes": 904
+    },
+    {
+      "source": "electron/src/main/netif.ts",
+      "sha256": "0dc44da02299a41f4cbd6d8d65afa363bf6d234f1e6e7a79ea1b0cddc6db4c91",
+      "bytes": 5512
+    },
+    {
+      "source": "electron/src/main/paths.ts",
+      "sha256": "aaa7f02cfd1f3b49c674694bd378aaf18ca2b6e724a833a01fa24892dac261db",
+      "bytes": 1183
+    },
+    {
+      "source": "electron/src/main/settings.ts",
+      "sha256": "ae2570feb7507ec686bdd2055031d5eff95372983d431cd2e834169881ac4a83",
+      "bytes": 4782
+    },
+    {
+      "source": "electron/src/main/settingsHub.ts",
+      "sha256": "b54935e93c60f2be1daf1bb45573ed0bfb3d88ae00fb13c17c11c3f8b3ea6af7",
+      "bytes": 3159
+    },
+    {
+      "source": "electron/src/main/settingsWindow.ts",
+      "sha256": "9aaa6e550e7169e67d0a1ca8c69a599b5ff72c120920aa395995fd1ecab7a8be",
+      "bytes": 4522
+    },
+    {
+      "source": "electron/src/main/sources/cpuMem.ts",
+      "sha256": "bf7668d519b192f43f8fa3f4673fbec42e53edb8863c681ddb3f85a382fd150a",
+      "bytes": 1272
+    },
+    {
+      "source": "electron/src/main/sources/cpuTemp.ts",
+      "sha256": "f660f68e0dedd82dff51c6f9649bab3da3b7f07b33f4868d5fb927c0b5f8d050",
+      "bytes": 544
+    },
+    {
+      "source": "electron/src/main/sources/gpu.ts",
+      "sha256": "828f0e233580c3dcca6a02990ee0731aa2d88c6f2ed43115ddd34e1f22dcda3a",
+      "bytes": 1248
+    },
+    {
+      "source": "electron/src/main/sources/network.ts",
+      "sha256": "aa32d1c3cff7cf24a2353a75da2e3365ec7a7bc0c1ea05cd1ffb6bbc26573a98",
+      "bytes": 4161
+    },
+    {
+      "source": "electron/src/main/sources/types.ts",
+      "sha256": "b0308426a51d6b2071c5ef8c6e885ca47ce636b5787c6e9354b8ac1d06755868",
+      "bytes": 292
+    },
+    {
+      "source": "electron/src/main/store.ts",
+      "sha256": "27e27c7d15550b5b95be1525dd86d61ad336794abfa620585edcb3a77148cdc4",
+      "bytes": 878
+    },
+    {
+      "source": "electron/src/main/tray.ts",
+      "sha256": "04258003f75a8bdd7cb4f09cacddd85568d64af1ad951c8cced68e494d60c3b9",
+      "bytes": 3890
+    },
+    {
+      "source": "electron/src/main/widgetWindow.ts",
+      "sha256": "af627a380d5b80a959d72e094fa556fcd821154edf0d1e7a9d349a91aa19ce9b",
+      "bytes": 7566
+    },
+    {
+      "source": "electron/src/main/widgetWindowPorts.ts",
+      "sha256": "c055a156dd6d0ea89e4bb593b6f1f6ff66431d7be1c8a53c1b748cc5fc9e72fd",
+      "bytes": 1924
+    },
+    {
+      "source": "electron/src/main/win32.ts",
+      "sha256": "c0a097b0ba01c0ac397d0108c9c937f975cf923008f8e7e0696f5565a293a7a7",
+      "bytes": 6660
+    },
+    {
+      "source": "electron/src/main/window/icon.ts",
+      "sha256": "9a7920f932a46508dfe43d07c3ad93a9ac2b63e82e71a45bad56c06bd8f9b19b",
+      "bytes": 410
+    },
+    {
+      "source": "electron/src/main/window/settings.ts",
+      "sha256": "bf499745b515cfe221db9a656eff58ab9712ef43b3fe06c9419dbd00ec647a41",
+      "bytes": 1269
+    },
+    {
+      "source": "electron/src/main/window/widget.ts",
+      "sha256": "b59ad7ac3eb656948fc05ee240f90e0f5bf85e604ca32f6a0f04780a97e2a67d",
+      "bytes": 1621
+    },
+    {
+      "source": "electron/src/main/wmi.ts",
+      "sha256": "c0be3825544c5ef9e561401adb45a2a9b39bc1523c88810ad21785680d799da5",
+      "bytes": 13092
+    },
+    {
+      "source": "electron/src/main/zOrderGuard.ts",
+      "sha256": "9d0fbd4e98fbaf6fe31072b86c17e21838a1b822c11ced161b96dd883bc47e4e",
+      "bytes": 4284
+    },
+    {
+      "source": "electron/src/preload/index.ts",
+      "sha256": "bb0ba21189a8689b2c12a23f01923d0e460fe1ce449525175bf4dc288038ea29",
+      "bytes": 1095
+    },
+    {
+      "source": "electron/src/renderer/settings.html",
+      "sha256": "686eda67be136d46bfd3e5e4a72e71dea2c7472f3641c83f3cc875e3bd76ce0b",
+      "bytes": 254
+    },
+    {
+      "source": "electron/src/renderer/src/env.d.ts",
+      "sha256": "f9ddce171d6f584ef47a503e8e8e15003337d5c5ab1d9a57e53075a650b840ec",
+      "bytes": 382
+    },
+    {
+      "source": "electron/src/renderer/src/lib/cardSize.ts",
+      "sha256": "75e0747f2af928b0404a40d70198593a41c909541ddc2b14ae8460e2b43a5f89",
+      "bytes": 2800
+    },
+    {
+      "source": "electron/src/renderer/src/lib/netSlot.ts",
+      "sha256": "ba5cb814ad2c91f798523cc91bf905578629392bfdb888689201fe2bd87bf8b0",
+      "bytes": 666
+    },
+    {
+      "source": "electron/src/renderer/src/lib/time.ts",
+      "sha256": "84ac4f068a80807167a0cadb26717de18c43333254edb1b59bc91da9d27bd41d",
+      "bytes": 287
+    },
+    {
+      "source": "electron/src/renderer/src/settings/components/SelectRow.vue",
+      "sha256": "dbb53a3b97cf165553c591972ce98ff05da391892d4c99400eb891d86f4f1727",
+      "bytes": 603
+    },
+    {
+      "source": "electron/src/renderer/src/settings/components/SettingsCard.vue",
+      "sha256": "89a158c41d9abc20e304f628c5b8cf06aa60e6f774f4f464ceb8fb667b2fa1c8",
+      "bytes": 281
+    },
+    {
+      "source": "electron/src/renderer/src/settings/components/SliderRow.vue",
+      "sha256": "f2b181c45d33d345bb639ea8e880b78206686f9f72f0b9fe44d4dabd18d6505d",
+      "bytes": 813
+    },
+    {
+      "source": "electron/src/renderer/src/settings/components/SwitchRow.vue",
+      "sha256": "67dd0aeb69caf359f7b45050192b3779283e7c5fe17b7e66accab0a795e4a16c",
+      "bytes": 560
+    },
+    {
+      "source": "electron/src/renderer/src/settings/main.ts",
+      "sha256": "cdf0e62152d3ed87ccc50b11696e1621543b41760d507ce447db8c28a456ab7b",
+      "bytes": 371
+    },
+    {
+      "source": "electron/src/renderer/src/settings/SettingsApp.vue",
+      "sha256": "bb99e9f348ab6f5263c6826e6da2b167477c15b5d4312fb72f9360e4a3ce2232",
+      "bytes": 5101
+    },
+    {
+      "source": "electron/src/renderer/src/styles/optical.css",
+      "sha256": "056cf45645ce29e8ff980067537af1812dda3dd98cd3008b3fd2834af6645a6d",
+      "bytes": 9452
+    },
+    {
+      "source": "electron/src/renderer/src/styles/settings.css",
+      "sha256": "f410f3739ae5dd9c1254a30e20cfba08243f8d1e6275fe2337275eb7d478ff9c",
+      "bytes": 4944
+    },
+    {
+      "source": "electron/src/renderer/src/styles/tokens.css",
+      "sha256": "b41e179d5070828c03a803c9bf7529428ac094836bd2aa81ac5071107968c5b3",
+      "bytes": 1744
+    },
+    {
+      "source": "electron/src/renderer/src/widget/components/MetricSegment.vue",
+      "sha256": "60cc1d96a6391b8326342e6999ebe856d3aea9d10d6b761596b9b8ed4a7c3462",
+      "bytes": 1229
+    },
+    {
+      "source": "electron/src/renderer/src/widget/components/NetReadings.vue",
+      "sha256": "1cc38cd68bdf8d4e5fed89788ad7539aade6b0e7d5a458ba6f8a498610536312",
+      "bytes": 1245
+    },
+    {
+      "source": "electron/src/renderer/src/widget/components/Reading.vue",
+      "sha256": "c0d9b44338ddbfba5cdfa2c482070823f1be4e41e310443f9113a8755aec84cd",
+      "bytes": 3682
+    },
+    {
+      "source": "electron/src/renderer/src/widget/main.ts",
+      "sha256": "15294a86afec4ae0f1b760db9bbf0a41b01ecc5ca64b029ef16c80e6201c7a9f",
+      "bytes": 180
+    },
+    {
+      "source": "electron/src/renderer/src/widget/WidgetApp.vue",
+      "sha256": "b4623bf88baa2cf72130d520a4a50e68f3944e2c58102a87a3d7e74e0e37e70c",
+      "bytes": 9275
+    },
+    {
+      "source": "electron/src/renderer/widget.html",
+      "sha256": "5b0a4cc366b602fdb6f1b6394f7c169890fa971d67b027817925f1da7ebba0cf",
+      "bytes": 242
+    },
+    {
+      "source": "electron/src/shared/cli.ts",
+      "sha256": "3df909ac4e86b0992e944fb79b2a92b07986a814f52ac7aa1dfda6a4b7edcb31",
+      "bytes": 341
+    },
+    {
+      "source": "electron/src/shared/types.ts",
+      "sha256": "6d1ecd0d797904c09099f5279fecab7cdaf8261ffce0554ef97ffdca20425646",
+      "bytes": 3383
+    },
+    {
+      "source": "electron/tests/autoHide.test.ts",
+      "sha256": "2302658fee4e79938c6356c051a8c4d40adc8e9c67d23eed499ef1afc6c74240",
+      "bytes": 1978
+    },
+    {
+      "source": "electron/tests/autostart.test.ts",
+      "sha256": "d560e2aa3cbca5af9862dfac6213cbf7e226a79c5875676ea980de2ec7cbcd0a",
+      "bytes": 1843
+    },
+    {
+      "source": "electron/tests/cardSize.test.ts",
+      "sha256": "7031e3ce367532e902f26230647bb1202b446b7d988943d3511e72aa55ba59d8",
+      "bytes": 3085
+    },
+    {
+      "source": "electron/tests/contrast.test.ts",
+      "sha256": "df9557a5cefa2949b50063e2bae442a1bc32a11b8fa99fba0327bd7d3474476f",
+      "bytes": 3483
+    },
+    {
+      "source": "electron/tests/dock.test.ts",
+      "sha256": "9354ab002702a2fe0bbf9a35cdf54fbabd10e13a638dd4d68cf1870928ed912b",
+      "bytes": 19323
+    },
+    {
+      "source": "electron/tests/elevate.test.ts",
+      "sha256": "c170b9df5ab74a35c2742393545ee840494652fbf9bf1fb9e7257bee3993d759",
+      "bytes": 1471
+    },
+    {
+      "source": "electron/tests/fullscreen.test.ts",
+      "sha256": "7e596917992fe5d468cf399186cefd07611d0874b1810bf752f8ecff836ff3b1",
+      "bytes": 2016
+    },
+    {
+      "source": "electron/tests/metrics.test.ts",
+      "sha256": "0340768c07f5a9f83ee89ad3d8786cf680eea3f35256527026cb55c65d9e7c53",
+      "bytes": 4030
+    },
+    {
+      "source": "electron/tests/netSlot.test.ts",
+      "sha256": "6ca855c332611e0b421c35b56d53dd1923126d6362980ba7b7346d659fe26bd0",
+      "bytes": 1076
+    },
+    {
+      "source": "electron/tests/network.test.ts",
+      "sha256": "56450b8c4d4e6507521251d254fc7b23e24aa10551a6373231f059bbd4a76248",
+      "bytes": 6124
+    },
+    {
+      "source": "electron/tests/opticalCenter.test.ts",
+      "sha256": "a63cd2d1f5dda17b24481ebbd91282325acb96e71e7466c2845e391023dec934",
+      "bytes": 13497
+    },
+    {
+      "source": "electron/tests/settings.test.ts",
+      "sha256": "b2cf74340690938ba4d8f54f79eb9a91d8e68283a13e52be962eecd69e64b718",
+      "bytes": 5944
+    },
+    {
+      "source": "electron/tests/settingsHub.test.ts",
+      "sha256": "9e9b23b4db667b275e5841e2be0982628dca37873669794c3a92316d19b9d1d6",
+      "bytes": 5198
+    },
+    {
+      "source": "electron/tests/settingsWindow.test.ts",
+      "sha256": "93fc839a4ea623651650f31dc33c381ef8a40dccf8f429b14c694aad4164a8b7",
+      "bytes": 6644
+    },
+    {
+      "source": "electron/tests/widgetWindow.test.ts",
+      "sha256": "f91b62619c3bb5ae0723b0b1d570723e5de9659a70e7bf6057301046ecb8ad7b",
+      "bytes": 15820
+    },
+    {
+      "source": "electron/tests/win32.test.ts",
+      "sha256": "7deb5de7436c3049edac94975b426b390127e374f12a792a91935e68996202ee",
+      "bytes": 1202
+    },
+    {
+      "source": "electron/tests/wmi.test.ts",
+      "sha256": "9c53fa6cab84341e8e577d82ce4c40895db02a55be10e79be8d2b307d8bd98f4",
+      "bytes": 2313
+    },
+    {
+      "source": "electron/tests/zOrderGuard.test.ts",
+      "sha256": "06c5ccf1e19db0f79e67850507450bc31375cf2203f6997e7fc3c6de6d589cae",
+      "bytes": 6512
+    },
+    {
+      "source": "README.md",
+      "sha256": "10f9e09938d832a0e9e8e1544906be36c86e85fa4adc46d00d26d4022018f6c7",
+      "bytes": 7921
+    },
+    {
+      "source": "resources/icon-white.png",
+      "sha256": "09f8383056d05353ac0e7c93bf4094dad462922f35248daa39a79791baa930b8",
+      "bytes": 4798
+    },
+    {
+      "source": "resources/icon.ico",
+      "sha256": "512a628b39effd95124887bbf2a81f4901a1fb2f232dc0976102bbdebd242b23",
+      "bytes": 6717
+    },
+    {
+      "source": "resources/icon.png",
+      "sha256": "9f4f460ba2288bb8c5a9ad1d94435f035c1c1194369d4b7a49bf6443a978b1e9",
+      "bytes": 4611
+    },
+    {
+      "source": "resources/tray-dark-16.png",
+      "sha256": "29a2222aef64f4ef9e33e3aa04f681c6fdfd4702ca9ca1a7bff10772ca6fc740",
+      "bytes": 302
+    },
+    {
+      "source": "resources/tray-dark-20.png",
+      "sha256": "266c97c09c69fc9fa8759a7e98d7ee50a4403b76d76262ad2f6ea729adcda226",
+      "bytes": 365
+    },
+    {
+      "source": "resources/tray-dark-24.png",
+      "sha256": "a9360f9df9547e0263159d84a0835344d4f0b0a78cd78ca109e199f38e38ec40",
+      "bytes": 435
+    },
+    {
+      "source": "resources/tray-dark-28.png",
+      "sha256": "f52a62ab7077078476ae4a77d552f32ffd754b27bf7fee398695f111c404debd",
+      "bytes": 515
+    },
+    {
+      "source": "resources/tray-dark-32.png",
+      "sha256": "d66a4daa956cf1cee15d2e72cf52f560a56b567750598c16a255bfcbb6b5838f",
+      "bytes": 539
+    },
+    {
+      "source": "resources/tray-light-16.png",
+      "sha256": "4c91a5f652ae72e72501251ffd6cb4ba675baefa0987f47c3c0ee60540a63c75",
+      "bytes": 297
+    },
+    {
+      "source": "resources/tray-light-20.png",
+      "sha256": "061a373a5d50fbaa456998a2fcf1028708c7e848e26b66c97c43d582a1927697",
+      "bytes": 364
+    },
+    {
+      "source": "resources/tray-light-24.png",
+      "sha256": "7fe8e0503703906969544e147ff66ab2a36252930f8ff7ee92e9078fb5c94ab8",
+      "bytes": 429
+    },
+    {
+      "source": "resources/tray-light-28.png",
+      "sha256": "15ee63ae294ab702b115580b0b98a76b0703d6ce239d8455ae91f6ca2d3a29dd",
+      "bytes": 513
+    },
+    {
+      "source": "resources/tray-light-32.png",
+      "sha256": "1f0e13c6986c2512ff91773e2a32be2f46a08ee8eda322b864d34af42ade240e",
+      "bytes": 539
+    },
+    {
+      "source": "resources/tray.png",
+      "sha256": "d66a4daa956cf1cee15d2e72cf52f560a56b567750598c16a255bfcbb6b5838f",
+      "bytes": 539
+    },
+    {
+      "source": "docs/screenshot.png",
+      "sha256": "354ea95e2a43c2e0ccb7d7335d24e68a77d29b42a22884ea2830a055add419ca",
+      "bytes": 32075
+    }
+  ]
+}

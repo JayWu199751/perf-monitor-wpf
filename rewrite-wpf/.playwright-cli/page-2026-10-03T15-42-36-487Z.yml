@@ -1,0 +1,147 @@
+- main [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e9]:
+      - heading "性能小窗" [level=1] [ref=e10]
+      - paragraph [ref=e11]: C# + WPF 重写 · 桌面交互原型
+    - generic [ref=e12]:
+      - generic [ref=e13]: 示例数据 / 浏览器模拟
+      - button "重置演示" [ref=e14] [cursor=pointer]
+  - generic "原型场景工具" [ref=e15]:
+    - group "预览场景" [ref=e16]:
+      - button "浮动" [pressed] [ref=e17] [cursor=pointer]
+      - button "贴边悬靠" [ref=e18] [cursor=pointer]
+      - button "任务栏行内" [ref=e19] [cursor=pointer]
+      - button "其他应用全屏" [ref=e20] [cursor=pointer]
+    - generic [ref=e21]:
+      - generic [ref=e22]:
+        - text: 示例数据
+        - combobox "示例数据" [ref=e23]:
+          - option "正常负载" [selected]
+          - option "高负载"
+          - option "不可用"
+      - button "右键菜单" [ref=e24] [cursor=pointer]
+      - button "打开设置" [ref=e25] [cursor=pointer]
+  - generic [ref=e26]:
+    - region "桌面模拟" [ref=e27]:
+      - generic [ref=e28]:
+        - strong [ref=e29]: 桌面预览
+        - generic [ref=e30]: 拖动小窗可调整位置
+      - generic [ref=e31]:
+        - generic [ref=e34]: 文件
+        - generic [aria-hidden] [ref=e35]:
+          - generic [ref=e36]: ♻
+          - generic [ref=e37]: 回收站
+        - generic:
+          - strong: 只占视线边缘的一行。
+          - text: 托盘左键显隐，小窗右键打开菜单。数值不可用时保留位置并显示 --。
+        - group "性能小窗，可拖动；按菜单键打开右键菜单" [ref=e38]:
+          - generic [ref=e39]:
+            - generic "CPU 使用率 / ACPI 热区温度" [ref=e40]:
+              - text: CPU
+              - generic [ref=e41]: 45%
+              - generic [ref=e42]: 67°
+            - generic "内存占用" [ref=e44]:
+              - text: 内存
+              - generic [ref=e45]: 62%
+            - generic "GPU 使用率 / 显存占用 / 温度" [ref=e47]:
+              - text: GPU
+              - generic [ref=e48]: 23%
+              - generic [ref=e49]: 41%
+              - generic [ref=e50]: 61°
+            - generic "下行 / 上行速率" [ref=e52]:
+              - text: 网络↓
+              - generic [ref=e53]: 12.4MB/s
+              - generic [ref=e54]:
+                - text: ↑
+                - generic [ref=e55]: 0.8MB/s
+            - generic "本地时间" [ref=e57]: 23:42:36
+        - generic "模拟任务栏" [ref=e58]:
+          - generic [aria-hidden] [ref=e59]:
+            - generic [ref=e65]: ⌕ 搜索
+            - generic [ref=e70]: ‹›
+          - generic [ref=e71]:
+            - generic [aria-hidden] [ref=e72]: ⌃
+            - button "性能小窗托盘：左键显隐，右键菜单" [ref=e73] [cursor=pointer]
+            - generic [aria-hidden] [ref=e78]: ⌁
+            - generic [ref=e79]: 14:322026/10/03
+      - generic [ref=e80]:
+        - generic [ref=e81]: 小窗可见
+        - generic [ref=e83]: 自由摆放
+        - generic [ref=e84]: 快 1s / 慢 3s
+      - paragraph [ref=e85]: 保留原有紧凑单行；切换示例数据可观察缺失态与数字宽度。
+    - complementary "设置窗口预览" [ref=e86]:
+      - generic [ref=e87]:
+        - strong [ref=e88]: 设置窗口
+        - generic [ref=e89]: 随改随保存
+      - generic [ref=e90]:
+        - generic [ref=e91]:
+          - generic [ref=e92]: 性能小窗 · 设置
+          - button "隐藏设置窗口" [ref=e93] [cursor=pointer]: ×
+        - generic [ref=e94]:
+          - heading "设置" [level=2] [ref=e95]
+          - generic [ref=e96]:
+            - heading "显示指标" [level=3] [ref=e97]
+            - generic [ref=e98]:
+              - generic [ref=e99]: CPU 使用率
+              - checkbox "CPU 使用率" [checked] [ref=e101] [cursor=pointer]
+            - generic [ref=e102]:
+              - generic [ref=e103]: 内存
+              - checkbox "内存" [checked] [ref=e105] [cursor=pointer]
+            - generic [ref=e106]:
+              - generic [ref=e107]: GPU 仅 NVIDIA
+              - checkbox "GPU 仅 NVIDIA" [checked] [ref=e109] [cursor=pointer]
+            - generic [ref=e110]:
+              - generic [ref=e111]: 网络
+              - checkbox "网络" [checked] [ref=e113] [cursor=pointer]
+            - generic [ref=e114]:
+              - generic [ref=e115]: 时间
+              - checkbox "时间" [checked] [ref=e117] [cursor=pointer]
+          - generic [ref=e118]:
+            - heading "刷新率" [level=3] [ref=e119]
+            - generic [ref=e120]:
+              - generic [ref=e121]: CPU / 内存 / 网络
+              - combobox "CPU / 内存 / 网络" [ref=e122]:
+                - option "1s" [selected]
+                - option "2s"
+                - option "5s"
+            - generic [ref=e123]:
+              - generic [ref=e124]: GPU / 温度
+              - combobox "GPU / 温度" [ref=e125]:
+                - option "3s" [selected]
+                - option "5s"
+          - generic [ref=e126]:
+            - heading "外观" [level=3] [ref=e127]
+            - generic [ref=e128]:
+              - generic [ref=e129]: 主题
+              - combobox "主题" [ref=e130]:
+                - option "跟随系统" [selected]
+                - option "深色"
+                - option "亮色"
+            - generic [ref=e131]:
+              - generic [ref=e132]:
+                - generic [ref=e133]: 背景不透明度
+                - status [ref=e134]: 72%
+              - slider "背景不透明度" [ref=e135] [cursor=pointer]: "72"
+            - generic [ref=e136]:
+              - generic [ref=e137]:
+                - generic [ref=e138]: 字体大小
+                - status [ref=e139]: "12"
+              - slider "字体大小" [ref=e140] [cursor=pointer]: "12"
+          - generic [ref=e141]:
+            - heading "行为" [level=3] [ref=e142]
+            - generic [ref=e143]:
+              - generic [ref=e144]: 开机自启
+              - checkbox "开机自启" [ref=e146] [cursor=pointer]
+            - generic [ref=e147]:
+              - generic [ref=e148]: 其他应用全屏时自动隐藏
+              - checkbox "其他应用全屏时自动隐藏" [checked] [ref=e150] [cursor=pointer]
+        - status [ref=e151]
+      - paragraph [ref=e152]: 菜单独有开关：透明显示、任务栏内水平居中。
+  - generic [ref=e153]:
+    - paragraph [ref=e154]: 此页展示外观与交互。数据为固定示例；任务栏、托盘、全屏与拖动均为网页模拟。WPF 的透明合成、DPI、数据采集和系统自启需要原生验证。
+    - generic [ref=e155]:
+      - button "导出示例配置" [ref=e156] [cursor=pointer]
+      - link "查看功能规格" [ref=e157] [cursor=pointer]:
+        - /url: ../spec.md
+  - group [ref=e158]:
+    - generic "查看原型状态" [ref=e159] [cursor=pointer]

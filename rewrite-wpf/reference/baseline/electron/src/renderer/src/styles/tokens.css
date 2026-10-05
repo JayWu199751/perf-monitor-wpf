@@ -1,0 +1,64 @@
+/*
+ * 两个窗口共用的主题令牌与重置。
+ * 主题机制：主进程 nativeTheme.themeSource 驱动 prefers-color-scheme，
+ * 这里只负责按明暗换变量值，渲染层不参与主题状态管理。
+ */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  color-scheme: dark;
+  --bar-bg-rgb: 29, 29, 31;
+  --bar-text: #f5f5f7;
+  --bar-secondary: rgba(245, 245, 247, 0.68);
+  --bar-label: rgba(245, 245, 247, 0.5);
+  --bar-dim: rgba(245, 245, 247, 0.32);
+  --bar-border: rgba(255, 255, 255, 0.14);
+  --bar-divider: rgba(255, 255, 255, 0.12);
+  --bar-accent: #0a84ff;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color-scheme: light;
+    --bar-bg-rgb: 250, 250, 252;
+    --bar-text: #1d1d1f;
+    --bar-secondary: rgba(29, 29, 31, 0.66);
+    /* 0.48 时标签（9.8px/600）对卡片只有 3.06:1，哪怕卡片完全不透明也不到 AA 的 4.5；
+       0.62 把它抬到 4.67:1（半透明压白壁纸时 4.69:1）。暗色那侧的 0.50 本来就有 4.82:1，不动。 */
+    --bar-label: rgba(29, 29, 31, 0.62);
+    --bar-dim: rgba(29, 29, 31, 0.3);
+    --bar-border: rgba(0, 0, 0, 0.12);
+    --bar-divider: rgba(0, 0, 0, 0.1);
+    --bar-accent: #0071e3;
+  }
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: transparent;
+}
+
+body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'SF Pro Text', 'Segoe UI Variable Text', 'Segoe UI', 'Microsoft YaHei', system-ui,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+#app {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}

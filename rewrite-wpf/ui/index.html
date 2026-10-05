@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>性能小窗 · WPF 交互原型</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath fill='%2318243a' d='M3 18h7v11H3zm11-13h7v24h-7zm11 8h6v16h-6z'/%3E%3C/svg%3E">
+<style>
+:root{color-scheme:light;--page:#f3f6fa;--ink:#18243a;--muted:#627087;--rule:#dce3ed;--blue:#0071e3;--fs:12px}
+*{box-sizing:border-box}body{margin:0;background:var(--page);color:var(--ink);font-family:'Segoe UI Variable Text','Segoe UI','Microsoft YaHei',sans-serif;font-size:14px;line-height:1.5}button,input,select{font:inherit}button{cursor:pointer}button:disabled{cursor:default}button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid #4c9deb;outline-offset:3px}button{color:inherit}a{color:#0768bd}button,select{touch-action:manipulation}
+.shell{max-width:1512px;margin:auto;padding:30px 36px 26px}.masthead{display:flex;align-items:center;justify-content:space-between;gap:24px;margin-bottom:24px}.identity{display:flex;align-items:center;gap:14px}.brand-mark{display:inline-flex;align-items:flex-end;gap:3px;width:32px;height:30px;padding:4px 2px}.brand-mark i{display:block;width:7px;background:currentColor;border-radius:2px}.brand-mark i:nth-child(1){height:13px}.brand-mark i:nth-child(2){height:23px}.brand-mark i:nth-child(3){height:17px}h1{font-size:26px;letter-spacing:-.6px;font-weight:650;line-height:1.2;margin:0}.subtitle{margin:5px 0 0;color:var(--muted);font-size:13px}.mast-actions{display:flex;align-items:center;gap:12px}.prototype-tag{color:#58677d;font-size:12px;padding:5px 9px;border:1px solid var(--rule);border-radius:5px}.plain-button{background:#fff;border:1px solid #d2dbe8;border-radius:6px;padding:7px 13px;font-size:13px}.plain-button:hover{border-color:#7ca2ca}.toolbar{display:flex;gap:18px;align-items:center;justify-content:space-between;margin-bottom:15px;flex-wrap:wrap}.scenes{display:flex;gap:3px;background:#e7edf5;padding:4px;border-radius:8px}.scenes button{border:0;background:transparent;color:#526179;padding:7px 16px;border-radius:5px;font-size:13px}.scenes button[aria-pressed=true]{background:#fff;box-shadow:0 1px 3px #18243a16;color:#173c6b}.tool-options{display:flex;align-items:center;gap:14px;font-size:12px;color:var(--muted)}.tool-options select{margin-left:7px;font-size:12px;background:white;border:1px solid var(--rule);border-radius:5px;padding:5px 22px 5px 8px;color:var(--ink)}.workspace{display:grid;grid-template-columns:minmax(0,1fr) 344px;gap:22px;align-items:start}.preview-head{display:flex;align-items:center;justify-content:space-between;height:34px;font-size:12px;color:var(--muted)}.preview-head strong{font-weight:600;color:#344a65}.screen{position:relative;height:590px;border:1px solid #a3b4c7;border-radius:9px;overflow:hidden;background:radial-gradient(ellipse at 16% 28%,#1c93a5 0,transparent 55%),linear-gradient(138deg,#145a84 0%,#083d70 50%,#112d50 100%);isolation:isolate}.wallpaper{position:absolute;inset:0;overflow:hidden;pointer-events:none}.ribbon{position:absolute;left:37%;top:-14%;width:78%;height:96%;border:80px solid #8ecced28;box-shadow:inset 17px 0 45px #94d9eb25,25px 14px 90px #071f4699;border-radius:47% 48% 44% 51%;transform:rotate(-28deg)}.ribbon.second{left:59%;top:4%;width:68%;height:84%;border-color:#73b9e51c;transform:rotate(-33deg)}.desk-note{position:absolute;left:30px;bottom:78px;color:#b4d6e6;font-size:12px;pointer-events:none;max-width:310px}.desk-note strong{display:block;color:#e4f3f8;font-weight:500;margin-bottom:5px;font-size:15px}.desktop-icon{position:absolute;top:22px;left:18px;display:flex;flex-direction:column;align-items:center;width:66px;gap:7px;color:white;font-size:11px;text-shadow:0 1px 2px #001b3a}.folder{height:29px;width:35px;border-radius:3px;background:linear-gradient(#efd17d,#d8a848);position:relative}.folder:before{content:'';position:absolute;left:0;top:-4px;width:17px;height:6px;background:#efd17d;border-radius:3px 3px 0 0}.desktop-icon.recycle{top:109px}.bin{height:30px;width:24px;border:2px solid #e6f6ff;background:#cae5ec50;border-radius:2px 2px 5px 5px;position:relative}.bin:after{content:'♻';display:block;text-align:center;color:#eefcff;font-size:17px}.taskbar{position:absolute;left:0;right:0;bottom:0;height:52px;display:flex;align-items:center;justify-content:center;background:#ebf4fbda;border-top:1px solid #ffffff70;backdrop-filter:blur(20px);z-index:2}.task-icons{display:flex;gap:16px;align-items:center}.task-icon{width:26px;height:26px;display:grid;place-items:center}.windows-logo{display:grid;grid-template-columns:repeat(2,10px);gap:2px;transform:perspective(40px) rotateY(-7deg)}.windows-logo i{width:10px;height:10px;background:#1178d9}.task-search{width:112px;height:29px;background:#ffffffb8;border-radius:18px;font-size:11px;display:flex;align-items:center;color:#4b5971;padding:0 11px;border:1px solid #bfcbd6}.task-browser{border-radius:50%;background:conic-gradient(#38c79d,#1077c7,#17559c,#38c79d);border:4px solid #41b8d4;box-shadow:inset 0 0 0 3px #e9f4fa;width:25px;height:25px}.task-folder{width:25px;height:21px;background:#ecc45b;border-radius:3px;box-shadow:inset 0 5px #f6da7a}.task-code{width:25px;height:25px;color:#0781c9;font-size:24px;font-weight:bold;line-height:1}.tray-area{position:absolute;right:12px;display:flex;gap:12px;align-items:center;color:#2e4561;font-size:12px}.tray-button{width:29px;height:34px;padding:6px;border:0;background:transparent;border-radius:4px}.tray-button:hover{background:#18355215}.tray-button .brand-mark{width:17px;height:18px;padding:0;gap:2px}.tray-button .brand-mark i{width:4px}.tray-button .brand-mark i:nth-child(1){height:9px}.tray-button .brand-mark i:nth-child(2){height:17px}.tray-button .brand-mark i:nth-child(3){height:12px}.tray-clock{font-size:11px;text-align:right;line-height:1.5;font-variant-numeric:tabular-nums}.taskbar .tray-theme-dark{color:#fff;background:#203956}.app-surface{--app-bg:#fafafc;--app-ink:#1d1d1f;--app-secondary:rgba(29,29,31,.66);--app-label:rgba(29,29,31,.62);--app-border:#0000001f;--app-divider:#0000001a;--app-row:#00000008;--app-control:#fff;--app-accent:#0071e3;color:var(--app-ink);color-scheme:light}.app-surface[data-theme=dark]{--app-bg:#1d1d1f;--app-ink:#f5f5f7;--app-secondary:rgba(245,245,247,.68);--app-label:rgba(245,245,247,.50);--app-border:#ffffff24;--app-divider:#ffffff1f;--app-row:#ffffff09;--app-control:#333337;--app-accent:#0a84ff;color-scheme:dark}
+.widget-host{position:absolute;left:104px;top:132px;z-index:8;max-width:none;touch-action:none;cursor:move;user-select:none;min-width:64px;border-radius:10px;background:transparent}.widget-host[hidden]{display:none}.widget{font-size:var(--fs);white-space:nowrap;display:inline-block;min-width:64px;line-height:1;padding:6px 8px;border-radius:calc(var(--fs)*.8);border:1px solid var(--app-border);background:rgba(var(--bar-rgb),var(--bar-opacity));box-shadow:0 2px 10px #00142926;backdrop-filter:blur(12px);font-variant-numeric:tabular-nums;letter-spacing:0}.segment{display:inline-block;vertical-align:baseline}.label{font-size:clamp(9px,calc(var(--fs)*.78),12px);color:var(--app-label);font-weight:600;margin-right:calc(var(--fs)*.58)}.reading{display:inline-block}.reading+.reading{margin-left:calc(var(--fs)*.5)}.num{font-size:var(--fs);font-weight:600;letter-spacing:-.2px}.unit{font-size:clamp(9px,calc(var(--fs)*.75),12px);margin-left:1px;vertical-align:1px}.degree{font-size:calc(var(--fs)*.72);vertical-align:.4em;margin-left:1px}.secondary{color:var(--app-secondary)}.secondary .num{font-size:calc(var(--fs)*.9);font-weight:500}.missing{opacity:.6}.arrow{color:var(--app-accent);margin-right:3px;font-size:calc(var(--fs)*.98)}.clock{font-weight:600;font-size:var(--fs);letter-spacing:.2px}.separator{display:inline-block;width:1px;height:calc(var(--fs)*.88);background:var(--app-divider);margin:0 calc(var(--fs)*.415);vertical-align:-1px}.widget.transparent{background:transparent;border-color:transparent;box-shadow:none;backdrop-filter:none}.widget.transparent .separator{background:transparent}.empty-hit{display:inline-block;width:46px;height:var(--fs)}
+.full-scene{position:absolute;inset:0 0 52px;background:#071421eb;z-index:6;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#dbe8f4;text-align:center;pointer-events:none}.full-scene[hidden]{display:none}.full-scene .full-symbol{font-size:35px;line-height:1;margin-bottom:20px;color:#6385a4}.full-scene h2{font-size:20px;font-weight:500;margin:0 0 9px}.full-scene p{font-size:13px;color:#92adc6;max-width:300px;margin:0}.full-scene .full-note{margin-top:30px;color:#c3d7e8;font-size:12px}.paused-badge{position:absolute;left:18px;top:16px;z-index:12;color:#d9ebff;background:#173552cf;padding:5px 10px;border:1px solid #a2c9f62f;border-radius:5px;font-size:11px;pointer-events:none}.paused-badge[hidden]{display:none}.screen-meta{display:flex;gap:18px;align-items:center;padding:12px 0 0;color:var(--muted);font-size:12px;flex-wrap:wrap}.state-dot{width:6px;height:6px;border-radius:50%;background:#138ea2;display:inline-block;margin-right:5px}.hint-line{margin:8px 0 0;font-size:12px;color:var(--muted)}
+.settings-window{border:1px solid var(--app-border);border-radius:8px;background:var(--app-bg);box-shadow:0 5px 20px #192b4412;overflow:hidden;height:652px;display:flex;flex-direction:column}.settings-window[hidden]{display:none}.titlebar{height:38px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding-left:14px;color:var(--app-secondary);font-size:11px;border-bottom:1px solid var(--app-divider)}.window-close{background:transparent;border:0;padding:8px 17px;font-size:17px;line-height:20px}.window-close:hover{background:#cb3549;color:white}.settings-body{padding:18px 20px 4px;overflow:auto;flex:1;scrollbar-width:thin}.settings-body h2{font-size:23px;font-weight:600;line-height:1.2;margin:0 0 19px}.settings-group{margin-bottom:20px}.settings-group h3{margin:0 0 8px;font-size:11px;color:var(--app-secondary);font-weight:600}.settings-group .row{min-height:33px;display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px}.row .row-name{color:var(--app-ink)}.row small{font-size:10px;color:var(--app-secondary);margin-left:3px}.switch{display:block;position:relative;width:31px;height:18px;flex-shrink:0}.switch input{position:absolute;opacity:0;inset:0;cursor:pointer;width:100%;height:100%;margin:0}.switch .track{display:block;pointer-events:none;border:1px solid var(--app-border);border-radius:10px;height:18px;background:var(--app-row)}.switch .track:after{content:'';width:10px;height:10px;position:absolute;top:4px;left:4px;background:var(--app-secondary);border-radius:50%}.switch input:checked+.track{background:var(--app-accent);border-color:var(--app-accent)}.switch input:checked+.track:after{left:17px;background:white}.switch input:focus-visible+.track{outline:3px solid #4c9deb;outline-offset:3px}.settings-group select{font-size:11px;border:1px solid var(--app-border);border-radius:4px;background:var(--app-control);padding:4px 7px;min-width:77px;color:var(--app-ink)}.range-row{margin-top:6px}.range-row .row{min-height:25px}.range-row output{font-size:12px;font-variant-numeric:tabular-nums;color:var(--app-secondary)}.range-row input{display:block;width:100%;accent-color:var(--app-accent);height:14px;margin:3px 0 9px;cursor:pointer}.save-status{flex-shrink:0;font-size:11px;padding:0 20px;height:25px;color:var(--app-accent)}.settings-placeholder{height:652px;border:1px dashed #bbc9db;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;color:var(--muted);font-size:13px}.settings-placeholder[hidden]{display:none}.settings-placeholder p{margin:0}.settings-note{font-size:11px;color:var(--muted);margin:9px 0 0}
+.context-menu{position:fixed;z-index:40;width:227px;background:var(--app-bg);border:1px solid var(--app-border);box-shadow:0 6px 22px #001d3b35;border-radius:7px;padding:5px;color:var(--app-ink)}.context-menu[hidden]{display:none}.context-menu button{display:flex;gap:9px;width:100%;align-items:center;text-align:left;min-height:32px;border:0;background:transparent;border-radius:4px;font-size:12px;padding:5px 8px}.context-menu button:hover,.context-menu button:focus-visible{background:var(--app-row)}.menu-check{width:15px;font-size:13px;color:var(--app-accent)}.context-menu hr{border:0;border-top:1px solid var(--app-divider);margin:5px 7px}.foot{margin-top:21px;display:flex;justify-content:space-between;align-items:flex-start;gap:24px;border-top:1px solid var(--rule);padding-top:15px;font-size:12px;color:var(--muted)}.foot p{margin:0;max-width:680px}.foot-actions{display:flex;gap:16px;white-space:nowrap}.text-button{background:transparent;border:0;color:#256aab;padding:0;font-size:12px}.state-details{margin-top:16px;font-size:12px;color:var(--muted)}.state-details summary{cursor:pointer;display:inline-block;color:#41617e}.state-details pre{background:white;color:#3e5572;border:1px solid var(--rule);padding:15px;max-height:230px;overflow:auto;border-radius:5px;font-size:11px}.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:50;padding:10px 18px;border:1px solid #d6e3ee;background:#fff;box-shadow:0 4px 18px #14375719;border-radius:7px;color:#28435f;font-size:13px}.toast[hidden]{display:none}
+@media(max-width:1150px){.shell{padding:24px}.workspace{grid-template-columns:minmax(0,1fr) 310px;gap:16px}.screen{height:590px}.task-search{display:none}.task-icons{gap:11px}.widget-host{left:80px}.desk-note{max-width:240px}}
+@media(max-width:880px){.workspace{grid-template-columns:1fr}.screen{height:430px}.settings-window{height:auto;max-height:680px}.settings-body{max-height:600px}.settings-placeholder{height:160px}.settings-note{margin-bottom:10px}.toolbar{gap:10px}.masthead{align-items:flex-start}.mast-actions{flex-direction:column;gap:6px;align-items:flex-end}.foot{flex-direction:column;gap:12px}.tray-area{gap:6px}.tray-clock{display:none}.task-icons{margin-right:60px}.desk-note{bottom:70px}.widget-host{left:15px;top:180px}.scenes button{padding:7px 12px}}
+@media(max-width:500px){.shell{padding:18px 12px}.prototype-tag{display:none}h1{font-size:23px}.identity{gap:9px}.subtitle{font-size:11px}.tool-options{flex-wrap:wrap;gap:8px}.scenes{width:100%;justify-content:space-between}.scenes button{padding:7px 8px;font-size:12px}.screen{height:370px}.desktop-icon{display:none}.task-icons{gap:13px}.desk-note{left:18px;max-width:260px}.screen-meta{gap:10px;font-size:11px}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto;transition:none!important}}
+.screen{height:682px}.settings-window,.settings-placeholder{height:744px}.settings-group{margin-bottom:18px}
+.widget{position:absolute;width:max-content;top:0}
+@media(max-width:880px){.screen{height:430px}.settings-window{height:auto;max-height:740px}.settings-placeholder{height:160px}}
+@media(max-width:500px){.screen{height:370px}}
+</style>
+</head>
+<body>
+<main class="shell">
+  <header class="masthead">
+    <div class="identity"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span><div><h1>性能小窗</h1><p class="subtitle">C# + WPF 重写 · 桌面交互原型</p></div></div>
+    <div class="mast-actions"><span class="prototype-tag">示例数据 / 浏览器模拟</span><button class="plain-button" id="reset">重置演示</button></div>
+  </header>
+  <div class="toolbar" aria-label="原型场景工具">
+    <div class="scenes" role="group" aria-label="预览场景"><button data-scene="float" aria-pressed="true">浮动</button><button data-scene="dock" aria-pressed="false">贴边悬靠</button><button data-scene="taskbar" aria-pressed="false">任务栏行内</button><button data-scene="fullscreen" aria-pressed="false">其他应用全屏</button></div>
+    <div class="tool-options"><label for="fixture">示例数据<select id="fixture"><option value="normal">正常负载</option><option value="busy">高负载</option><option value="missing">不可用</option></select></label><button id="open-menu" class="plain-button">右键菜单</button><button id="open-settings" class="plain-button">打开设置</button></div>
+  </div>
+  <div class="workspace">
+    <section aria-label="桌面模拟">
+      <div class="preview-head"><strong>桌面预览</strong><span>拖动小窗可调整位置</span></div>
+      <div id="screen" class="screen">
+        <div class="wallpaper" aria-hidden="true"><div class="ribbon"></div><div class="ribbon second"></div></div>
+        <div class="desktop-icon" aria-hidden="true"><div class="folder"></div><span>文件</span></div><div class="desktop-icon recycle" aria-hidden="true"><div class="bin"></div><span>回收站</span></div>
+        <div class="desk-note"><strong>只占视线边缘的一行。</strong>托盘左键显隐，小窗右键打开菜单。<br>数值不可用时保留位置并显示 --。</div>
+        <div id="full-scene" class="full-scene" hidden><div class="full-symbol">⛶</div><h2>其他应用正在全屏</h2><p>小窗可自动隐藏。你的手动显示或隐藏优先于自动行为。</p><div class="full-note">可点击托盘三柱图标手动显示</div></div>
+        <div id="paused" class="paused-badge" hidden>小窗隐藏 · 采样暂停</div>
+        <div id="widget-host" class="widget-host app-surface" data-theme="dark" role="group" tabindex="0" aria-label="性能小窗，可拖动；按菜单键打开右键菜单"><div id="widget" class="widget"></div></div>
+        <div class="taskbar" aria-label="模拟任务栏">
+          <div class="task-icons" aria-hidden="true"><div class="task-icon windows-logo"><i></i><i></i><i></i><i></i></div><div class="task-search">⌕　搜索</div><div class="task-icon"><div class="task-folder"></div></div><div class="task-icon"><div class="task-browser"></div></div><div class="task-code">‹›</div></div>
+          <div class="tray-area"><span aria-hidden="true">⌃</span><button id="tray" class="tray-button" aria-label="性能小窗托盘：左键显隐，右键菜单" title="性能小窗"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span></button><span aria-hidden="true">⌁</span><div class="tray-clock" id="tray-clock">14:32<br>2026/10/03</div></div>
+        </div>
+      </div>
+      <div class="screen-meta" aria-live="polite"><span><i class="state-dot"></i><span id="visibility-label">小窗可见</span></span><span id="placement-label">自由摆放</span><span id="sampling-label">快 1s / 慢 3s</span></div>
+      <p class="hint-line" id="scene-hint">保留原有紧凑单行；切换示例数据可观察缺失态与数字宽度。</p>
+    </section>
+    <aside aria-label="设置窗口预览">
+      <div class="preview-head"><strong>设置窗口</strong><span>随改随保存</span></div>
+      <div id="settings-window" class="settings-window app-surface" data-theme="dark">
+        <div class="titlebar"><span>性能小窗 · 设置</span><button class="window-close" id="close-settings" aria-label="隐藏设置窗口">×</button></div>
+        <div class="settings-body"><h2>设置</h2>
+          <section class="settings-group"><h3>显示指标</h3>
+            <div class="row"><label class="row-name" for="metric-cpu">CPU 使用率</label><label class="switch"><input id="metric-cpu" type="checkbox" data-metric="cpu" checked><span class="track"></span></label></div>
+            <div class="row"><label class="row-name" for="metric-mem">内存</label><label class="switch"><input id="metric-mem" type="checkbox" data-metric="mem" checked><span class="track"></span></label></div>
+            <div class="row"><label class="row-name" for="metric-gpu">GPU <small>仅 NVIDIA</small></label><label class="switch"><input id="metric-gpu" type="checkbox" data-metric="gpu" checked><span class="track"></span></label></div>
+            <div class="row"><label class="row-name" for="metric-net">网络</label><label class="switch"><input id="metric-net" type="checkbox" data-metric="net" checked><span class="track"></span></label></div>
+            <div class="row"><label class="row-name" for="metric-time">时间</label><label class="switch"><input id="metric-time" type="checkbox" data-metric="time" checked><span class="track"></span></label></div>
+          </section>
+          <section class="settings-group"><h3>刷新率</h3><div class="row"><label for="fast">CPU / 内存 / 网络</label><select id="fast"><option value="1000">1s</option><option value="2000">2s</option><option value="5000">5s</option></select></div><div class="row"><label for="slow">GPU / 温度</label><select id="slow"><option value="3000">3s</option><option value="5000">5s</option></select></div></section>
+          <section class="settings-group"><h3>外观</h3><div class="row"><label for="theme">主题</label><select id="theme"><option value="system">跟随系统</option><option value="dark">深色</option><option value="light">亮色</option></select></div>
+            <div class="range-row"><div class="row"><label for="opacity">背景不透明度</label><output id="opacity-value" for="opacity">72%</output></div><input id="opacity" type="range" min="20" max="100" step="1" value="72" aria-describedby="opacity-help"><span id="opacity-help" hidden>背景改变不透明度，文字保持清晰。调节按5%步长。</span></div>
+            <div class="range-row"><div class="row"><label for="font-size">字体大小</label><output id="font-value" for="font-size">12</output></div><input id="font-size" type="range" min="10" max="18" step="1" value="12"></div>
+          </section>
+          <section class="settings-group"><h3>行为</h3><div class="row"><label for="autostart">开机自启</label><label class="switch"><input id="autostart" type="checkbox"><span class="track"></span></label></div><div class="row"><label for="auto-hide">其他应用全屏时自动隐藏</label><label class="switch"><input id="auto-hide" type="checkbox" checked><span class="track"></span></label></div></section>
+        </div><div class="save-status" id="saved" role="status"></div>
+      </div>
+      <div id="settings-placeholder" class="settings-placeholder" hidden><p>设置窗口已隐藏</p><button id="reopen-settings" class="plain-button">打开设置</button></div>
+      <p class="settings-note">菜单独有开关：透明显示、任务栏内水平居中。</p>
+    </aside>
+  </div>
+  <footer class="foot"><p>此页展示外观与交互。数据为固定示例；任务栏、托盘、全屏与拖动均为网页模拟。WPF 的透明合成、DPI、数据采集和系统自启需要原生验证。</p><div class="foot-actions"><button id="export" class="text-button">导出示例配置</button><a href="../spec.md">查看功能规格</a></div></footer>
+  <details class="state-details"><summary>查看原型状态</summary><pre id="state-view"></pre></details>
+</main>
+<div id="menu" class="context-menu app-surface" data-theme="dark" role="menu" aria-label="性能小窗共享菜单" hidden>
+  <button role="menuitem" data-action="toggle"><span class="menu-check"></span>显示/隐藏小窗</button>
+  <button role="menuitem" data-action="settings"><span class="menu-check"></span>打开设置</button>
+  <button role="menuitemcheckbox" data-action="center" aria-checked="false"><span class="menu-check"></span>任务栏内水平居中</button>
+  <button role="menuitemcheckbox" data-action="transparent" aria-checked="false"><span class="menu-check"></span>透明显示</button>
+  <hr><button role="menuitem" data-action="quit"><span class="menu-check"></span>退出</button>
+</div>
+<div id="toast" class="toast" role="status" hidden></div>
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+const defaults=()=>({widget:{x:104,y:132,docked:null},metrics:{cpu:true,mem:true,gpu:true,net:true,time:true},refreshFastMs:1000,refreshSlowMs:3000,autostart:false,autoHideOnFullscreen:true,centerInTaskbarRow:false,transparentDisplay:false,opacity:.72,fontSize:12,theme:'system'});
+let settings=defaults();
+let demo={scene:'float',fixture:'normal',visible:true,manualHidden:false,autoHidden:false,fullscreen:false,moving:false,exited:false,settingsVisible:true};
+const media=matchMedia('(prefers-color-scheme: dark)');
+let saveTimer,toastTimer,drag=null,peakWidth=0,layoutKey='',menuAnchor=null;
+const fixtures={normal:{cpu:45,cpuTemp:67,mem:62,gpu:23,vram:41,gpuTemp:61,down:12.4,up:.8},busy:{cpu:100,cpuTemp:85,mem:94,gpu:100,vram:89,gpuTemp:79,down:125.0,up:18.6},missing:{cpu:24,cpuTemp:null,mem:51,gpu:null,vram:null,gpuTemp:null,down:null,up:null}};
+function timeText(){return new Date().toLocaleTimeString('zh-CN',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});}
+function effectiveTheme(){return settings.theme==='system'?(media.matches?'dark':'light'):settings.theme;}
+function numberText(value,decimals=0){return value==null?'--':Number(value).toFixed(decimals);}
+function reading(value,unit,secondary=false,decimals=0){return '<span class="reading'+(secondary?' secondary':'')+'"><span class="num'+(value==null?' missing':'')+'">'+numberText(value,decimals)+'</span><span class="'+(unit==='°'?'degree':'unit')+'">'+unit+'</span></span>';}
+function segment(label,content,title){return '<span class="segment" title="'+title+'"><span class="label">'+label+'</span>'+content+'</span>';}
+function renderWidget(){
+  const f=fixtures[demo.fixture],s=settings.metrics,parts=[];
+  if(s.cpu)parts.push(segment('CPU',reading(f.cpu,'%')+reading(f.cpuTemp,'°',true),'CPU 使用率 / ACPI 热区温度'));
+  if(s.mem)parts.push(segment('内存',reading(f.mem,'%'),'内存占用'));
+  if(s.gpu)parts.push(segment('GPU',reading(f.gpu,'%')+reading(f.vram,'%',true)+reading(f.gpuTemp,'°',true),'GPU 使用率 / 显存占用 / 温度'));
+  if(s.net)parts.push(segment('网络','<span class="arrow">↓</span>'+reading(f.down,'MB/s',false,1)+'<span class="reading" style="margin-left:calc(var(--fs)*.5)"><span class="arrow">↑</span>'+reading(f.up,'MB/s',false,1)+'</span>','下行 / 上行速率'));
+  if(s.time)parts.push('<span class="segment clock" id="live-clock" title="本地时间">'+timeText()+'</span>');
+  $('widget').innerHTML=parts.length?parts.join('<span class="separator" aria-hidden="true"></span>'):'<span class="empty-hit" title="所有指标已关闭，可从托盘打开设置"></span>';
+  $('widget').classList.toggle('transparent',settings.transparentDisplay);
+  $('widget-host').style.setProperty('--fs',settings.fontSize+'px');
+  $('widget-host').style.setProperty('--bar-rgb',effectiveTheme()==='dark'?'29,29,31':'250,250,252');
+  $('widget-host').style.setProperty('--bar-opacity',settings.opacity);
+  const nextKey=settings.fontSize+':'+Object.values(s).join(',');
+  if(layoutKey!==nextKey){peakWidth=0;layoutKey=nextKey;}
+  if(!$('widget-host').hidden)peakWidth=Math.max(peakWidth,$('widget').offsetWidth);
+  const previewScale=Math.min(1,Math.max(.35,($('screen').clientWidth-18)/Math.max(64,peakWidth)));
+  $('widget').style.transform='scale('+previewScale+')';$('widget').style.transformOrigin='top left';
+  $('widget').style.left=(Math.max(64,peakWidth)-$('widget').offsetWidth)*previewScale/2+'px';
+  $('widget-host').style.width=Math.max(64,peakWidth)*previewScale+'px';
+  $('widget-host').style.height=$('widget').offsetHeight*previewScale+'px';
+}
+function positionWidget(){
+  const screen=$('screen'),host=$('widget-host');
+  const maxX=Math.max(0,screen.clientWidth-host.offsetWidth),maxY=screen.clientHeight-52-host.offsetHeight;
+  let {x,y}=settings.widget;
+  if(!demo.moving){
+    if(demo.scene==='taskbar'){y=screen.clientHeight-26-host.offsetHeight/2;if(settings.centerInTaskbarRow)x=(screen.clientWidth-host.offsetWidth)/2;}
+    else if(demo.scene==='dock'){x=maxX;y=1;}
+    else{x=Math.max(1,Math.min(maxX-1,x));y=Math.max(1,Math.min(maxY-1,y));}
+  }
+  host.style.left=Math.round(x)+'px';host.style.top=Math.round(y)+'px';
+  settings.widget.x=Math.round(x);settings.widget.y=Math.round(y);
+}
+function showSaved(){clearTimeout(saveTimer);$('saved').textContent='已保存（原型内存）';saveTimer=setTimeout(()=>{$('saved').textContent='';},2000);}
+function toast(message){clearTimeout(toastTimer);$('toast').textContent=message;$('toast').hidden=false;toastTimer=setTimeout(()=>{$('toast').hidden=true;},2600);}
+function render(){
+  const theme=effectiveTheme();document.querySelectorAll('.app-surface').forEach(el=>el.dataset.theme=theme);
+  $('tray').classList.toggle('tray-theme-dark',theme==='dark');
+  $('widget-host').hidden=!demo.visible||demo.exited;renderWidget();
+  $('full-scene').hidden=!demo.fullscreen;
+  $('paused').hidden=demo.visible&&!demo.exited;
+  $('paused').textContent=demo.exited?'演示已退出 · 可重置恢复':'小窗隐藏 · 采样暂停';
+  $('settings-window').hidden=!demo.settingsVisible;
+  $('settings-placeholder').hidden=demo.settingsVisible;
+  document.querySelectorAll('[data-scene]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.scene===demo.scene?'true':'false'));
+  document.querySelectorAll('[data-metric]').forEach(input=>input.checked=settings.metrics[input.dataset.metric]);
+  $('fixture').value=demo.fixture;$('theme').value=settings.theme;$('fast').value=String(settings.refreshFastMs);$('slow').value=String(settings.refreshSlowMs);
+  $('opacity').value=String(Math.round(settings.opacity*100));$('opacity-value').value=Math.round(settings.opacity*100)+'%';
+  $('font-size').value=String(settings.fontSize);$('font-value').value=String(settings.fontSize);
+  $('autostart').checked=settings.autostart;$('auto-hide').checked=settings.autoHideOnFullscreen;
+  document.querySelectorAll('[data-action="center"],[data-action="transparent"]').forEach(b=>{const checked=b.dataset.action==='center'?settings.centerInTaskbarRow:settings.transparentDisplay;b.setAttribute('aria-checked',String(checked));b.querySelector('.menu-check').textContent=checked?'✓':'';});
+  $('visibility-label').textContent=demo.exited?'演示已退出':demo.visible?'小窗可见':demo.manualHidden?'手动隐藏':demo.autoHidden?'全屏自动隐藏':'小窗隐藏';
+  $('placement-label').textContent=demo.scene==='taskbar'?(settings.centerInTaskbarRow?'任务栏行内 / 水平居中':'任务栏行内 / 自由横向'):demo.scene==='dock'?'右上角贴边':'自由摆放';
+  $('sampling-label').textContent=!demo.visible||demo.exited?'采样暂停':'快 '+settings.refreshFastMs/1000+'s / 慢 '+settings.refreshSlowMs/1000+'s';
+  $('scene-hint').textContent=demo.scene==='taskbar'?'行内为覆盖式落点；开启水平居中后，拖动松手会回到整行中心。':demo.fullscreen?'通过托盘手动显示后，同一全屏周期不会再自动隐藏。':settings.transparentDisplay?'透明显示保留文字和命中区域，可继续拖动与右键。':'保留原有紧凑单行；切换示例数据可观察缺失态与数字宽度。';
+  positionWidget();renderState();
+}
+function renderState(){$('state-view').textContent=JSON.stringify({settings,prototype:demo,measuredPreview:{hostWidth:peakWidth,cardHeight:$('widget').offsetHeight},note:'示例内存状态；未连接Windows或真实指标'},null,2);}
+function changeFullscreen(full){if(full===demo.fullscreen)return;demo.fullscreen=full;if(full){if(settings.autoHideOnFullscreen&&!demo.manualHidden&&demo.visible){demo.visible=false;demo.autoHidden=true;}}else{if(demo.autoHidden&&!demo.manualHidden)demo.visible=true;demo.autoHidden=false;}}
+function setScene(scene){if(demo.exited)return;changeFullscreen(scene==='fullscreen');demo.scene=scene;if(scene==='float'){settings.widget={x:Math.min(104,$('screen').clientWidth/6),y:132,docked:null};}else if(scene==='dock')settings.widget.docked='top-right';else if(scene==='taskbar'){settings.widget.docked='bottom';settings.widget.x=Math.max(12,$('screen').clientWidth-peakWidth-18);}render();}
+function manualToggle(){if(demo.exited)return;if(demo.visible){demo.visible=false;demo.manualHidden=true;demo.autoHidden=false;}else{demo.visible=true;demo.manualHidden=false;demo.autoHidden=false;}render();}
+function openSettings(){if(demo.exited){toast('演示已退出，请先重置');return;}demo.settingsVisible=true;render();}
+function closeMenu(){const wasOpen=!$('menu').hidden;$('menu').hidden=true;if(wasOpen&&menuAnchor&&document.contains(menuAnchor))menuAnchor.focus({preventScroll:true});}
+function openMenu(x,y,anchor){if(demo.exited)return;menuAnchor=anchor;$('menu').hidden=false;const menu=$('menu');menu.style.left=Math.max(8,Math.min(x,innerWidth-menu.offsetWidth-8))+'px';menu.style.top=Math.max(8,Math.min(y,innerHeight-menu.offsetHeight-8))+'px';menu.querySelector('button').focus();}
+function saveAndRender(){showSaved();render();}
+document.querySelectorAll('[data-scene]').forEach(b=>b.addEventListener('click',()=>setScene(b.dataset.scene)));
+document.querySelectorAll('[data-metric]').forEach(i=>i.addEventListener('change',()=>{settings.metrics[i.dataset.metric]=i.checked;saveAndRender();}));
+$('fixture').addEventListener('change',e=>{demo.fixture=e.target.value;render();});
+$('theme').addEventListener('change',e=>{settings.theme=e.target.value;saveAndRender();});
+$('fast').addEventListener('change',e=>{settings.refreshFastMs=Number(e.target.value);saveAndRender();});
+$('slow').addEventListener('change',e=>{settings.refreshSlowMs=Number(e.target.value);saveAndRender();});
+$('opacity').addEventListener('input',e=>{const raw=Number(e.target.value);const pct=Math.max(20,Math.min(100,Math.round(raw/5)*5));settings.opacity=pct/100;saveAndRender();});
+$('font-size').addEventListener('input',e=>{settings.fontSize=Number(e.target.value);saveAndRender();});
+$('autostart').addEventListener('change',e=>{settings.autostart=e.target.checked;saveAndRender();toast('仅更新示例状态，未创建系统自启任务');});
+$('auto-hide').addEventListener('change',e=>{settings.autoHideOnFullscreen=e.target.checked;if(!settings.autoHideOnFullscreen&&demo.autoHidden){demo.visible=true;demo.autoHidden=false;}else if(settings.autoHideOnFullscreen&&demo.fullscreen&&!demo.manualHidden&&demo.visible){demo.visible=false;demo.autoHidden=true;}saveAndRender();});
+$('close-settings').addEventListener('click',()=>{demo.settingsVisible=false;render();});
+['open-settings','reopen-settings'].forEach(id=>$(id).addEventListener('click',openSettings));
+$('tray').addEventListener('click',manualToggle);
+['widget-host','tray'].forEach(id=>$(id).addEventListener('contextmenu',e=>{e.preventDefault();openMenu(e.clientX,e.clientY,$(id));}));
+$('open-menu').addEventListener('click',e=>{const r=e.target.getBoundingClientRect();openMenu(r.left,r.bottom+6,e.target);});
+$('widget-host').addEventListener('keydown',e=>{if(e.key==='ContextMenu'||(e.key==='F10'&&e.shiftKey)){e.preventDefault();const r=e.currentTarget.getBoundingClientRect();openMenu(r.left,r.bottom+6,e.currentTarget);}});
+$('menu').addEventListener('click',e=>{const b=e.target.closest('[data-action]');if(!b)return;const a=b.dataset.action;if(a==='toggle')manualToggle();else if(a==='settings')openSettings();else if(a==='center'){settings.centerInTaskbarRow=!settings.centerInTaskbarRow;saveAndRender();}else if(a==='transparent'){settings.transparentDisplay=!settings.transparentDisplay;saveAndRender();}else if(a==='quit'){demo.exited=true;demo.visible=false;demo.settingsVisible=false;render();toast('演示已退出；点击重置演示重新开始');}closeMenu();});
+$('menu').addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();closeMenu();}else if(['ArrowDown','ArrowUp','Home','End'].includes(e.key)){e.preventDefault();const items=[...$('menu').querySelectorAll('button')],index=items.indexOf(document.activeElement);items[e.key==='Home'?0:e.key==='End'?items.length-1:(index+(e.key==='ArrowDown'?1:-1)+items.length)%items.length].focus();}});
+document.addEventListener('pointerdown',e=>{if(!$('menu').hidden&&!$('menu').contains(e.target)&&e.target!==$('open-menu')){$('menu').hidden=true;}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeMenu();});
+$('widget-host').addEventListener('pointerdown',e=>{if(e.button!==0||demo.exited)return;closeMenu();const host=e.currentTarget;host.setPointerCapture(e.pointerId);drag={pointer:e.pointerId,startX:e.clientX,startY:e.clientY,left:settings.widget.x,top:settings.widget.y};demo.moving=true;renderState();});
+$('widget-host').addEventListener('pointermove',e=>{if(!drag||e.pointerId!==drag.pointer)return;const screen=$('screen'),host=$('widget-host');settings.widget.x=Math.max(0,Math.min(screen.clientWidth-host.offsetWidth,drag.left+e.clientX-drag.startX));settings.widget.y=Math.max(0,Math.min(screen.clientHeight-host.offsetHeight,drag.top+e.clientY-drag.startY));host.style.left=settings.widget.x+'px';host.style.top=settings.widget.y+'px';});
+function endDrag(e){if(!drag||e.pointerId!==drag.pointer)return;drag=null;demo.moving=false;const host=$('widget-host'),screen=$('screen'),cy=settings.widget.y+host.offsetHeight/2;const wasFull=demo.fullscreen;if(cy>=screen.clientHeight-52){demo.scene='taskbar';settings.widget.docked='bottom';}else{demo.scene='float';const edges=[];if(settings.widget.y<=8)edges.push('top');if(screen.clientHeight-52-(settings.widget.y+host.offsetHeight)<=8)edges.push('bottom');if(settings.widget.x<=8)edges.push('left');if(screen.clientWidth-(settings.widget.x+host.offsetWidth)<=8)edges.push('right');settings.widget.docked=edges.length?edges.join('-'):null;if(edges.includes('top'))settings.widget.y=1;if(edges.includes('bottom'))settings.widget.y=screen.clientHeight-52-host.offsetHeight-1;if(edges.includes('left'))settings.widget.x=1;if(edges.includes('right'))settings.widget.x=screen.clientWidth-host.offsetWidth-1;}if(wasFull)changeFullscreen(false);showSaved();render();}
+$('widget-host').addEventListener('pointerup',endDrag);$('widget-host').addEventListener('pointercancel',endDrag);
+$('reset').addEventListener('click',()=>{clearTimeout(saveTimer);settings=defaults();demo={scene:'float',fixture:'normal',visible:true,manualHidden:false,autoHidden:false,fullscreen:false,moving:false,exited:false,settingsVisible:true};drag=null;peakWidth=0;layoutKey='';$('saved').textContent='';$('menu').hidden=true;render();toast('演示已重置，未写入任何系统配置');});
+$('export').addEventListener('click',()=>{const blob=new Blob([JSON.stringify({prototypeOnly:true,...settings},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='perf-widget-prototype-settings.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('导出的是示例配置，不能证明系统自启或采样已生效');});
+media.addEventListener('change',()=>{if(settings.theme==='system')render();});
+new ResizeObserver(()=>{renderWidget();positionWidget();renderState();}).observe($('screen'));
+setInterval(()=>{const now=timeText(),clock=$('live-clock');if(clock&&demo.visible&&!demo.exited)clock.textContent=now;$('tray-clock').innerHTML=now.slice(0,5)+'<br>'+new Date().toLocaleDateString('zh-CN');},1000);
+const query=new URLSearchParams(location.search);if(['system','dark','light'].includes(query.get('theme')))settings.theme=query.get('theme');
+render();if(['float','dock','taskbar','fullscreen'].includes(query.get('scene')))setScene(query.get('scene'));
+</script>
+</body>
+</html>

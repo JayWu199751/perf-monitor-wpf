@@ -1,0 +1,82 @@
+{
+  "name": "win11-perf-widget-electron",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Windows 11 性能检测小窗（Electron + Vue 3）",
+  "main": "out/main/index.js",
+  "author": "jay",
+  "license": "UNLICENSED",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "typecheck": "npm run typecheck:node && npm run typecheck:web",
+    "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
+    "typecheck:web": "vue-tsc --noEmit -p tsconfig.web.json --composite false",
+    "test": "vitest run",
+    "measure:alignment": "electron scripts/alignment/measure.cjs",
+    "probe:dock": "electron scripts/dock/probe-row-center.cjs",
+    "dist": "electron-vite build && electron-builder"
+  },
+  "dependencies": {
+    "koffi": "^3.2.0",
+    "vue": "^3.5.42"
+  },
+  "devDependencies": {
+    "@types/node": "^26.4.1",
+    "@vitejs/plugin-vue": "^6.0.8",
+    "electron": "^44.2.0",
+    "electron-builder": "^26.15.3",
+    "electron-vite": "^5.0.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.6",
+    "vitest": "^5.0.0",
+    "vue-tsc": "^3.3.11"
+  },
+  "build": {
+    "appId": "com.jay.perfwidget",
+    "productName": "性能小窗",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "out/**",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../resources",
+        "to": "resources"
+      }
+    ],
+    "asarUnpack": [
+      "node_modules/koffi/**"
+    ],
+    "win": {
+      "icon": "../resources/icon.ico",
+      "requestedExecutionLevel": "requireAdministrator",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": false,
+      "createStartMenuShortcut": true,
+      "shortcutName": "性能小窗",
+      "include": "build/installer.nsh"
+    }
+  },
+  "allowScripts": {
+    "electron@44.2.0": true,
+    "esbuild@0.25.12": true,
+    "koffi@3.2.0": true
+  }
+}
