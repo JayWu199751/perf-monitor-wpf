@@ -44,6 +44,29 @@ public sealed class PerformanceMetricsContractTests
         Assert.Equal(76, snapshot.CpuPercentage);
     }
 
+    [Fact(DisplayName = "活动处理器组变化时本轮 CPU 缺失，并以新组集合重建差分基线")]
+    public async Task Cpu_usage_discards_a_delta_when_the_processor_group_count_changes()
+    {
+        var host = new MetricsShellHost(new SequenceSystemMetricsSource(
+        [
+            new CpuTimeCounters(KernelTime: 1000, UserTime: 100, IdleTime: 900, ProcessorGroupCount: 1),
+            new CpuTimeCounters(KernelTime: 1500, UserTime: 100, IdleTime: 1300, ProcessorGroupCount: 2),
+            new CpuTimeCounters(KernelTime: 1535, UserTime: 115, IdleTime: 1320, ProcessorGroupCount: 2)
+        ],
+        new PhysicalMemoryCounters(TotalPhysicalBytes: 8UL * 1024 * 1024 * 1024, AvailablePhysicalBytes: 3UL * 1024 * 1024 * 1024)));
+        var shell = new StartupShellController(host);
+
+        shell.Start();
+        var first = await host.ReadNextSnapshotAsync();
+        var topologyChanged = await host.ReadNextSnapshotAsync();
+        var stableTopology = await host.ReadNextSnapshotAsync();
+        shell.SelectMenuItem(ShellMenuAction.Exit);
+
+        Assert.Equal(0, first.CpuPercentage);
+        Assert.Null(topologyChanged.CpuPercentage);
+        Assert.Equal(60, stableTopology.CpuPercentage);
+    }
+
     [Fact(DisplayName = "CPU 累计时间没有变化时显示零而不是 NaN")]
     public async Task Cpu_usage_returns_zero_when_the_difference_window_has_no_elapsed_time()
     {

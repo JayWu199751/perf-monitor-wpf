@@ -1,6 +1,10 @@
 namespace PerfMonitor.Core.Metrics;
 
-public readonly record struct CpuTimeCounters(ulong KernelTime, ulong UserTime, ulong IdleTime);
+public readonly record struct CpuTimeCounters(
+    ulong KernelTime,
+    ulong UserTime,
+    ulong IdleTime,
+    ushort ProcessorGroupCount = 1);
 
 public readonly record struct PhysicalMemoryCounters(ulong TotalPhysicalBytes, ulong AvailablePhysicalBytes);
 
@@ -265,7 +269,8 @@ internal sealed class PerformanceMetricsSampler : IDisposable
             }
 
             _previous = value;
-            if (value.KernelTime < previous.KernelTime ||
+            if (value.ProcessorGroupCount != previous.ProcessorGroupCount ||
+                value.KernelTime < previous.KernelTime ||
                 value.UserTime < previous.UserTime ||
                 value.IdleTime < previous.IdleTime)
             {
