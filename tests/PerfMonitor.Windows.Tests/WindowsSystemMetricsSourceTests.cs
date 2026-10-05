@@ -1,18 +1,11 @@
-using PerfMonitor.Windows.Metrics;
 using System.Runtime.InteropServices;
+using PerfMonitor.Windows.Metrics;
 using Xunit.Abstractions;
 
 namespace PerfMonitor.Windows.Tests;
 
-public sealed class WindowsSystemMetricsSourceTests
+public sealed class WindowsSystemMetricsSourceTests(ITestOutputHelper output)
 {
-    private readonly ITestOutputHelper _output;
-
-    public WindowsSystemMetricsSourceTests(ITestOutputHelper output)
-    {
-        _output = output;
-    }
-
     [Fact(DisplayName = "CPU 读数覆盖本机活动处理器组并恢复调用线程亲和性")]
     public void Reads_cpu_times_for_active_groups_and_restores_thread_affinity()
     {
@@ -22,8 +15,7 @@ public sealed class WindowsSystemMetricsSourceTests
             NativeMethods.GetCurrentThread(),
             out var affinityBefore));
 
-        var source = new WindowsSystemMetricsSource();
-        var cpu = source.ReadCpuTimes();
+        var cpu = new WindowsSystemMetricsSource().ReadCpuTimes();
 
         Assert.True(NativeMethods.GetThreadGroupAffinity(
             NativeMethods.GetCurrentThread(),
@@ -34,10 +26,10 @@ public sealed class WindowsSystemMetricsSourceTests
         Assert.Equal(affinityBefore.Group, affinityAfter.Group);
         Assert.Equal(affinityBefore.Mask, affinityAfter.Mask);
 
-        _output.WriteLine($"当前主机活动处理器组数: {expectedGroupCount}");
-        _output.WriteLine(
+        output.WriteLine($"当前主机活动处理器组数: {expectedGroupCount}");
+        output.WriteLine(
             $"聚合 API 读数: kernel={cpu.Value.KernelTime}, user={cpu.Value.UserTime}, idle={cpu.Value.IdleTime}");
-        _output.WriteLine(
+        output.WriteLine(
             $"调用线程亲和性已恢复: group={affinityAfter.Group}, mask=0x{affinityAfter.Mask.ToUInt64():X}");
     }
 
@@ -49,6 +41,17 @@ public sealed class WindowsSystemMetricsSourceTests
         Assert.NotNull(memory);
         Assert.True(memory.Value.TotalPhysicalBytes > 0);
         Assert.True(memory.Value.AvailablePhysicalBytes <= memory.Value.TotalPhysicalBytes);
+    }
+
+    [Fact(DisplayName = "Windows 系统源可读取网卡计数和单调时间戳")]
+    public void Reads_network_counters_and_monotonic_timestamp()
+    {
+        var network = new WindowsSystemMetricsSource().ReadNetworkCounters();
+
+        Assert.NotNull(network);
+        Assert.InRange(network.Interfaces.Count, 1, 4096);
+        Assert.True(network.MonotonicTimestamp > TimeSpan.Zero);
+        Assert.All(network.Interfaces, row => Assert.NotEqual(0UL, row.InterfaceLuid));
     }
 
     private static class NativeMethods

@@ -8,19 +8,35 @@ public readonly record struct CpuTimeCounters(
 
 public readonly record struct PhysicalMemoryCounters(ulong TotalPhysicalBytes, ulong AvailablePhysicalBytes);
 
+public readonly record struct NetworkInterfaceCounters(
+    ulong InterfaceLuid,
+    bool IsUp,
+    bool IsLoopback,
+    uint PhysicalMediumType,
+    ulong InOctets,
+    ulong OutOctets);
+
+public sealed record NetworkCountersSnapshot(
+    TimeSpan MonotonicTimestamp,
+    IReadOnlyList<NetworkInterfaceCounters> Interfaces);
+
 public sealed record PerformanceMetricsSnapshot(
     long Generation,
     int? CpuPercentage,
     int? MemoryPercentage,
     double? MemoryUsedGiB,
     double? MemoryTotalGiB,
-    DateTimeOffset Timestamp);
+    DateTimeOffset Timestamp,
+    double? NetworkDownloadMegabytesPerSecond = null,
+    double? NetworkUploadMegabytesPerSecond = null);
 
 public interface ISystemMetricsSource
 {
     CpuTimeCounters? ReadCpuTimes();
 
     PhysicalMemoryCounters? ReadPhysicalMemory();
+
+    NetworkCountersSnapshot? ReadNetworkCounters();
 }
 
 internal sealed class PerformanceMetricsSampler : IDisposable
@@ -121,6 +137,7 @@ internal sealed class PerformanceMetricsSampler : IDisposable
     {
         var token = cancellation.Token;
         var cpuUsage = new CpuUsageTracker();
+        var networkUsage = new NetworkThroughputTracker();
 
         try
         {
@@ -141,13 +158,26 @@ internal sealed class PerformanceMetricsSampler : IDisposable
                     }
 
                     var memory = ReadMemorySafely();
+                    if (token.IsCancellationRequested || !IsCurrentGeneration(generation, cancellation, token))
+                    {
+                        return;
+                    }
+
+                    var network = networkUsage.Read(ReadNetworkCountersSafely());
+                    if (token.IsCancellationRequested || !IsCurrentGeneration(generation, cancellation, token))
+                    {
+                        return;
+                    }
+
                     PublishIfCurrent(new PerformanceMetricsSnapshot(
                         generation,
                         cpuPercentage,
                         memory?.Percentage,
                         memory?.UsedGiB,
                         memory?.TotalGiB,
-                        DateTimeOffset.UtcNow),
+                        DateTimeOffset.UtcNow,
+                        network?.DownloadMegabytesPerSecond,
+                        network?.UploadMegabytesPerSecond),
                         cancellation,
                         token);
                 }
@@ -248,7 +278,152 @@ internal sealed class PerformanceMetricsSampler : IDisposable
         }
     }
 
+    private NetworkCountersSnapshot? ReadNetworkCountersSafely()
+    {
+        try
+        {
+            return _source.ReadNetworkCounters();
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+
     private readonly record struct MemoryReading(int Percentage, double UsedGiB, double TotalGiB);
+
+    private sealed class NetworkThroughputTracker
+    {
+        private const uint UnspecifiedPhysicalMedium = 0;
+        private const double BytesPerMebibyte = 1024d * 1024;
+        private readonly Dictionary<ulong, NetworkBaseline> _baselines = [];
+        private readonly List<ulong> _staleBaselineLuids = [];
+        private long _snapshotGeneration;
+
+        public NetworkSpeedReading? Read(NetworkCountersSnapshot? snapshot)
+        {
+            if (snapshot is null || snapshot.Interfaces is null)
+            {
+                return null;
+            }
+
+            var hasBaseCandidate = false;
+            var hasPhysicalCandidate = false;
+            var fastestBaseCandidate = default(NetworkSpeedCandidate);
+            var fastestPhysicalCandidate = default(NetworkSpeedCandidate);
+            var snapshotGeneration = unchecked(++_snapshotGeneration);
+
+            foreach (var row in snapshot.Interfaces)
+            {
+                if (!row.IsUp || row.IsLoopback)
+                {
+                    continue;
+                }
+
+                var speed = CalculateSpeed(row, snapshot.MonotonicTimestamp);
+                if (!hasBaseCandidate ||
+                    speed.TotalMegabytesPerSecond > fastestBaseCandidate.TotalMegabytesPerSecond)
+                {
+                    fastestBaseCandidate = speed;
+                }
+
+                hasBaseCandidate = true;
+                if (row.PhysicalMediumType != UnspecifiedPhysicalMedium)
+                {
+                    if (!hasPhysicalCandidate ||
+                        speed.TotalMegabytesPerSecond > fastestPhysicalCandidate.TotalMegabytesPerSecond)
+                    {
+                        fastestPhysicalCandidate = speed;
+                    }
+
+                    hasPhysicalCandidate = true;
+                }
+
+                // 物理/回退筛选只影响本轮胜出者，所有基础候选都保留最新差分基线。
+                _baselines[row.InterfaceLuid] = new NetworkBaseline(
+                    row,
+                    snapshot.MonotonicTimestamp,
+                    snapshotGeneration);
+            }
+
+            // 成功读表后，基线只保留仍处于 Up 且非 loopback 的接口；物理筛选变化不影响基线。
+            _staleBaselineLuids.Clear();
+            foreach (var baseline in _baselines)
+            {
+                if (baseline.Value.SnapshotGeneration != snapshotGeneration)
+                {
+                    _staleBaselineLuids.Add(baseline.Key);
+                }
+            }
+
+            foreach (var luid in _staleBaselineLuids)
+            {
+                _baselines.Remove(luid);
+            }
+
+            _staleBaselineLuids.Clear();
+
+            if (!hasBaseCandidate)
+            {
+                return new NetworkSpeedReading(0, 0);
+            }
+
+            var fastest = hasPhysicalCandidate ? fastestPhysicalCandidate : fastestBaseCandidate;
+            return new NetworkSpeedReading(
+                RoundMegabytesPerSecond(fastest.DownloadMegabytesPerSecond),
+                RoundMegabytesPerSecond(fastest.UploadMegabytesPerSecond));
+        }
+
+        private NetworkSpeedCandidate CalculateSpeed(
+            NetworkInterfaceCounters current,
+            TimeSpan monotonicTimestamp)
+        {
+            if (!_baselines.TryGetValue(current.InterfaceLuid, out var previous))
+            {
+                return new NetworkSpeedCandidate(0, 0);
+            }
+
+            var elapsedSeconds = ((double)monotonicTimestamp.Ticks - previous.MonotonicTimestamp.Ticks) /
+                                 TimeSpan.TicksPerSecond;
+            if (elapsedSeconds <= 0)
+            {
+                return new NetworkSpeedCandidate(0, 0);
+            }
+
+            var download = CalculateDirectionSpeed(current.InOctets, previous.Counters.InOctets, elapsedSeconds);
+            var upload = CalculateDirectionSpeed(current.OutOctets, previous.Counters.OutOctets, elapsedSeconds);
+            return new NetworkSpeedCandidate(download, upload);
+        }
+
+        private static double CalculateDirectionSpeed(ulong current, ulong previous, double elapsedSeconds)
+        {
+            if (current < previous)
+            {
+                return 0;
+            }
+
+            return (current - previous) / elapsedSeconds / BytesPerMebibyte;
+        }
+
+        private static double RoundMegabytesPerSecond(double value) =>
+            Math.Round(value, 1, MidpointRounding.AwayFromZero);
+
+        private readonly record struct NetworkBaseline(
+            NetworkInterfaceCounters Counters,
+            TimeSpan MonotonicTimestamp,
+            long SnapshotGeneration);
+
+        private readonly record struct NetworkSpeedCandidate(
+            double DownloadMegabytesPerSecond,
+            double UploadMegabytesPerSecond)
+        {
+            public double TotalMegabytesPerSecond => DownloadMegabytesPerSecond + UploadMegabytesPerSecond;
+        }
+    }
+
+    private readonly record struct NetworkSpeedReading(
+        double DownloadMegabytesPerSecond,
+        double UploadMegabytesPerSecond);
 
     private sealed class CpuUsageTracker
     {
