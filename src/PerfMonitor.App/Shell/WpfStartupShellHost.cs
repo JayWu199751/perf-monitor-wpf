@@ -1,7 +1,7 @@
 using System.ComponentModel;
 using System.IO;
-using DrawingIcon = System.Drawing.Icon;
-using Forms = System.Windows.Forms;
+using Microsoft.Win32;
+using PerfMonitor.App.Shell;
 using PerfMonitor.Core.Shell;
 using PerfMonitor.Core.Metrics;
 using PerfMonitor.Core.Settings;
@@ -33,7 +33,10 @@ internal sealed class WpfStartupShellHost : IStartupShellHost, IDisposable
     private Func<SettingsPatch, PerformanceSettings>? _updateSettings;
     private PerformanceBarWindow? _performanceBar;
     private SettingsWindow? _settingsWindow;
-    private Forms.NotifyIcon? _trayIcon;
+    private TrayIconController? _trayIcon;
+    private Action? _trayLeftClick;
+    private Action? _trayRightClick;
+    private readonly ContextMenuPresentationGuard _contextMenuGuard = new();
     private Action? _performanceBarMoveRequestHandler;
     private bool _shutdownRequested;
     private volatile bool _disposed;
@@ -42,7 +45,12 @@ internal sealed class WpfStartupShellHost : IStartupShellHost, IDisposable
     {
         _application = application;
         _settingsStore = settingsStore;
+        // 托盘图标跟随系统有效主题与显示设置变化；theme 固定时设置窗的主题变化经 ApplySettings 触发。
+        SystemEvents.UserPreferenceChanged += OnSystemThemeOrDisplayChanged;
+        SystemEvents.DisplaySettingsChanged += OnSystemThemeOrDisplayChanged;
     }
+
+    private void OnSystemThemeOrDisplayChanged(object? sender, EventArgs e) => RefreshTrayIcon();
 
     public event EventHandler? PerformanceBarRightClickRequested;
 
@@ -179,24 +187,45 @@ internal sealed class WpfStartupShellHost : IStartupShellHost, IDisposable
             return;
         }
 
-        var iconPath = Path.Combine(AppContext.BaseDirectory, "Resources", "icon.ico");
-        _trayIcon = new Forms.NotifyIcon
+        _trayLeftClick = leftClick;
+        _trayRightClick = rightClick;
+        _trayIcon = new TrayIconController(
+            Path.Combine(AppContext.BaseDirectory, "Resources"),
+            leftClick,
+            rightClick);
+        _trayIcon.Show(IsDarkEffectiveTheme(), PerformanceBarDpiScale());
+    }
+
+    /// <summary>主题或 DPI 变化时重选托盘图标资源；编组到 UI 线程执行。</summary>
+    private void RefreshTrayIcon()
+    {
+        var dispatcher = _application.Dispatcher;
+        if (_disposed || _trayIcon is null ||
+            dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished)
         {
-            Icon = new DrawingIcon(iconPath),
-            Text = "性能小窗",
-            Visible = true
-        };
-        _trayIcon.MouseClick += (_, e) =>
+            return;
+        }
+
+        _ = dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
         {
-            if (e.Button == Forms.MouseButtons.Left)
+            if (!_disposed && _trayIcon is not null)
             {
-                leftClick();
+                _trayIcon.UpdateIcon(IsDarkEffectiveTheme(), PerformanceBarDpiScale());
             }
-            else if (e.Button == Forms.MouseButtons.Right)
-            {
-                rightClick();
-            }
-        };
+        }));
+    }
+
+    private bool IsDarkEffectiveTheme() => _currentSettings.Theme switch
+    {
+        BarTheme.Dark => true,
+        BarTheme.Light => false,
+        _ => PerformanceBarViewModel.IsDarkSystemTheme()
+    };
+
+    private double PerformanceBarDpiScale()
+    {
+        var bar = _performanceBar;
+        return bar is { IsLoaded: true } ? bar.DpiScale : 1.0;
     }
 
     public void ShowContextMenu(
@@ -204,7 +233,12 @@ internal sealed class WpfStartupShellHost : IStartupShellHost, IDisposable
         IReadOnlyList<ShellMenuItem> items,
         Action<ShellMenuAction> selectItem)
     {
-        _sharedContextMenu.IsOpen = false;
+        // 同一次右键可能先后收到 WM_RBUTTONUP 与 WM_CONTEXTMENU 两条消息，只弹一次。
+        if (!_contextMenuGuard.ShouldOpen(_sharedContextMenu.IsOpen, Environment.TickCount64))
+        {
+            return;
+        }
+
         _sharedContextMenu.Items.Clear();
 
         foreach (var item in items)
@@ -268,10 +302,15 @@ internal sealed class WpfStartupShellHost : IStartupShellHost, IDisposable
 
     public void ApplySettings(PerformanceSettings settings)
     {
+        var themeChanged = _currentSettings.Theme != settings.Theme;
         _currentSettings = settings;
         var resetWidth = _performanceBarViewModel.ApplySettings(settings);
         _performanceBar?.RefreshNaturalWidth(resetWidth);
         _settingsWindow?.ApplySettings(settings, _settingsStore.RecoveredInvalidSettingsOnLastLoad);
+        if (themeChanged)
+        {
+            RefreshTrayIcon();
+        }
     }
 
     public void UpdatePerformanceMetrics(PerformanceMetricsSnapshot snapshot)
@@ -327,6 +366,8 @@ internal sealed class WpfStartupShellHost : IStartupShellHost, IDisposable
         }
 
         _disposed = true;
+        SystemEvents.UserPreferenceChanged -= OnSystemThemeOrDisplayChanged;
+        SystemEvents.DisplaySettingsChanged -= OnSystemThemeOrDisplayChanged;
         _fullscreenWatcher.Dispose();
         _sharedContextMenu.IsOpen = false;
         _sharedContextMenu.Items.Clear();
@@ -370,15 +411,7 @@ internal sealed class WpfStartupShellHost : IStartupShellHost, IDisposable
 
     private void DisposeTrayIcon()
     {
-        if (_trayIcon is null)
-        {
-            return;
-        }
-
-        var icon = _trayIcon.Icon;
-        _trayIcon.Visible = false;
-        _trayIcon.Dispose();
-        icon?.Dispose();
+        _trayIcon?.Dispose();
         _trayIcon = null;
     }
 }

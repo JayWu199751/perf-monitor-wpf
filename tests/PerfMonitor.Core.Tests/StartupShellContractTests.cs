@@ -406,6 +406,53 @@ public sealed class StartupShellContractTests
         ], host.ContextMenus[0].Items);
     }
 
+    [Fact(DisplayName = "透明显示切换即时生效、持久化，且两处菜单勾选保持一致")]
+    public void Transparent_display_toggle_persists_and_keeps_both_menu_origins_in_sync()
+    {
+        var store = new RecordingSettingsStore(PerformanceSettings.Default);
+        var host = new RecordingStartupShellHost(settingsStore: store);
+        var shell = new StartupShellController(host);
+        shell.Start();
+
+        host.ClickTrayRight();
+        host.SelectMenuItem(ShellMenuAction.ToggleTransparentDisplay);
+
+        Assert.True(shell.Settings.TransparentDisplay);
+        Assert.True(store.LastSaved!.TransparentDisplay);
+        Assert.True(host.AppliedSettings[^1].TransparentDisplay);
+
+        shell.OnPerformanceBarRightClick();
+
+        var trayMenu = host.ContextMenus[0].Items.Single(item =>
+            item.Action == ShellMenuAction.ToggleTransparentDisplay);
+        var barMenu = host.ContextMenus[^1].Items.Single(item =>
+            item.Action == ShellMenuAction.ToggleTransparentDisplay);
+        Assert.False(trayMenu.IsChecked);
+        Assert.True(barMenu.IsChecked);
+    }
+
+    [Fact(DisplayName = "透明显示往返保留背景不透明度值供退出时恢复")]
+    public void Transparent_display_round_trip_keeps_the_opacity_value_for_restore()
+    {
+        var initial = PerformanceSettings.Default with { Opacity = 0.45 };
+        var store = new RecordingSettingsStore(initial);
+        var host = new RecordingStartupShellHost(settingsStore: store);
+        var shell = new StartupShellController(host);
+        shell.Start();
+
+        host.ClickTrayRight();
+        host.SelectMenuItem(ShellMenuAction.ToggleTransparentDisplay);
+        Assert.True(shell.Settings.TransparentDisplay);
+        Assert.Equal(0.45, shell.Settings.Opacity);
+        Assert.Equal(0.45, store.LastSaved!.Opacity);
+
+        host.ClickTrayRight();
+        host.SelectMenuItem(ShellMenuAction.ToggleTransparentDisplay);
+        Assert.False(shell.Settings.TransparentDisplay);
+        Assert.Equal(0.45, shell.Settings.Opacity);
+        Assert.Equal(0.45, store.LastSaved!.Opacity);
+    }
+
     [Fact(DisplayName = "性能条左键请求原生整窗移动，右键只打开菜单")]
     public void Performance_bar_move_and_menu_actions_keep_their_mouse_semantics()
     {
