@@ -293,6 +293,8 @@ internal sealed class PerformanceMetricsSampler : IDisposable
         private const uint UnspecifiedPhysicalMedium = 0;
         private const double BytesPerMebibyte = 1024d * 1024;
         private readonly Dictionary<ulong, NetworkBaseline> _baselines = [];
+        private readonly List<ulong> _staleBaselineLuids = [];
+        private long _snapshotGeneration;
 
         public NetworkSpeedReading? Read(NetworkCountersSnapshot? snapshot)
         {
@@ -305,6 +307,7 @@ internal sealed class PerformanceMetricsSampler : IDisposable
             var hasPhysicalCandidate = false;
             var fastestBaseCandidate = default(NetworkSpeedCandidate);
             var fastestPhysicalCandidate = default(NetworkSpeedCandidate);
+            var snapshotGeneration = unchecked(++_snapshotGeneration);
 
             foreach (var row in snapshot.Interfaces)
             {
@@ -333,8 +336,28 @@ internal sealed class PerformanceMetricsSampler : IDisposable
                 }
 
                 // 物理/回退筛选只影响本轮胜出者，所有基础候选都保留最新差分基线。
-                _baselines[row.InterfaceLuid] = new NetworkBaseline(row, snapshot.MonotonicTimestamp);
+                _baselines[row.InterfaceLuid] = new NetworkBaseline(
+                    row,
+                    snapshot.MonotonicTimestamp,
+                    snapshotGeneration);
             }
+
+            // 成功读表后，基线只保留仍处于 Up 且非 loopback 的接口；物理筛选变化不影响基线。
+            _staleBaselineLuids.Clear();
+            foreach (var baseline in _baselines)
+            {
+                if (baseline.Value.SnapshotGeneration != snapshotGeneration)
+                {
+                    _staleBaselineLuids.Add(baseline.Key);
+                }
+            }
+
+            foreach (var luid in _staleBaselineLuids)
+            {
+                _baselines.Remove(luid);
+            }
+
+            _staleBaselineLuids.Clear();
 
             if (!hasBaseCandidate)
             {
@@ -383,7 +406,8 @@ internal sealed class PerformanceMetricsSampler : IDisposable
 
         private readonly record struct NetworkBaseline(
             NetworkInterfaceCounters Counters,
-            TimeSpan MonotonicTimestamp);
+            TimeSpan MonotonicTimestamp,
+            long SnapshotGeneration);
 
         private readonly record struct NetworkSpeedCandidate(
             double DownloadMegabytesPerSecond,

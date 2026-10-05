@@ -240,6 +240,37 @@ public sealed class StartupShellContractTests
         }
     }
 
+    [Fact(DisplayName = "完整接口表中消失的网卡重现时重新建立零速率基线")]
+    public async Task Reappearing_network_interface_starts_with_a_fresh_baseline()
+    {
+        const ulong mebibyte = 1024UL * 1024;
+        var source = new ScriptedSystemMetricsSource(
+        [
+            new NetworkCountersSnapshot(TimeSpan.FromSeconds(10),
+                [new NetworkInterfaceCounters(11, true, false, 14, 0, 0)]),
+            new NetworkCountersSnapshot(TimeSpan.FromSeconds(11), []),
+            new NetworkCountersSnapshot(TimeSpan.FromSeconds(12),
+                [new NetworkInterfaceCounters(11, true, false, 14, 4 * mebibyte, 2 * mebibyte)])
+        ]);
+        var host = new RecordingStartupShellHost(source);
+        var shell = new StartupShellController(host);
+
+        shell.Start();
+        try
+        {
+            var snapshots = await host.WaitForMetricSnapshotsAsync(3);
+
+            Assert.Equal(0d, snapshots[0].NetworkDownloadMegabytesPerSecond);
+            Assert.Equal(0d, snapshots[1].NetworkDownloadMegabytesPerSecond);
+            Assert.Equal(0d, snapshots[2].NetworkDownloadMegabytesPerSecond);
+            Assert.Equal(0d, snapshots[2].NetworkUploadMegabytesPerSecond);
+        }
+        finally
+        {
+            shell.SelectMenuItem(ShellMenuAction.Exit);
+        }
+    }
+
     private sealed class RecordingStartupShellHost : IStartupShellHost
     {
         private Action? _trayLeftClick;
