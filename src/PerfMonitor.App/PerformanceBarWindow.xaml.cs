@@ -1,12 +1,15 @@
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
+using PerfMonitor.Core.Shell;
+using PerfMonitor.Windows.Displays;
 using WpfSize = System.Windows.Size;
 
 namespace PerfMonitor.App;
 
-public partial class PerformanceBarWindow : Window
+public partial class PerformanceBarWindow : Window, IPerformanceBarPlacementPort
 {
     private readonly Action _requestNativeMove;
     private double _peakWidth = 64;
@@ -25,6 +28,13 @@ public partial class PerformanceBarWindow : Window
     public event EventHandler? ContextMenuRequested;
 
     internal void BeginNativeMove() => DragMove();
+
+    public PlacementRect ReadFrame() => NativeWindowFrame.ReadFrame(WindowHandle);
+
+    public void SetFramePosition(double x, double y) =>
+        NativeWindowFrame.SetPosition(WindowHandle, x, y);
+
+    private nint WindowHandle => new WindowInteropHelper(this).EnsureHandle();
 
     internal void RefreshNaturalWidth(bool resetPeakWidth = false)
     {

@@ -58,6 +58,12 @@ public interface IStartupShellHost
 
     ISlowMetricsSource? SlowMetricsSource => null;
 
+    /// <summary>显示器与工作区信息端口；缺省表示宿主不提供落位能力。</summary>
+    IDisplayEnvironmentSource? DisplayEnvironmentSource => null;
+
+    /// <summary>性能条窗口框架读写端口；窗口重建后宿主必须返回新实例。</summary>
+    IPerformanceBarPlacementPort? PerformanceBarPlacement => null;
+
     void ShowPerformanceBar(bool activate);
 
     void SetPerformanceBarVisible(bool visible, bool activate);
@@ -97,16 +103,23 @@ public sealed class StartupShellController : IDisposable
     private readonly ISettingsStore? _settingsStore;
     private readonly PerformanceMetricsSampler? _metricsSampler;
     private readonly PerformanceSlowMetricsSampler? _slowMetricsSampler;
+    private readonly IDisplayEnvironmentSource? _displayEnvironmentSource;
+    private readonly PlacementPersistence? _placementPersistence;
     private readonly object _metricsSnapshotSync = new();
+    private readonly object _placementSync = new();
     private PerformanceMetricsSnapshot? _latestMetricsSnapshot;
     private long _metricsGeneration;
     private bool _isPerformanceBarNativeMoveActive;
+    private IPerformanceBarPlacementPort? _placementPort;
+    private WidgetPlacement _lastPlacement = new();
+    private bool _isSettlingPlacement;
     private bool _disposed;
 
     public StartupShellController(
         IStartupShellHost host,
         int? fastRefreshMilliseconds = null,
-        int? slowRefreshMilliseconds = null)
+        int? slowRefreshMilliseconds = null,
+        int? placementDebounceMilliseconds = null)
     {
         _host = host;
         _settingsStore = host.SettingsStore;
@@ -117,6 +130,20 @@ public sealed class StartupShellController : IDisposable
             SlowRefreshMilliseconds = slowRefreshMilliseconds ?? loadedSettings.SlowRefreshMilliseconds
         }).Validate();
         _host.SetPerformanceBarMoveRequestHandler(OnPerformanceBarNativeMoveRequested);
+        _lastPlacement = Settings.Widget;
+        _displayEnvironmentSource = host.DisplayEnvironmentSource;
+        if (_displayEnvironmentSource is not null)
+        {
+            _displayEnvironmentSource.DisplaysChanged += OnDisplaysChanged;
+        }
+
+        if (_settingsStore is not null)
+        {
+            _placementPersistence = new PlacementPersistence(
+                SavePlacement,
+                placementDebounceMilliseconds ?? 500);
+        }
+
         if (host.SystemMetricsSource is { } source)
         {
             _metricsSampler = new PerformanceMetricsSampler(source, PublishMetrics, Settings.FastRefreshMilliseconds);
@@ -167,6 +194,7 @@ public sealed class StartupShellController : IDisposable
 
         _host.ApplySettings(Settings);
         _host.ShowPerformanceBar(activate: false);
+        RestorePlacementIfPortChanged();
         _host.CreateTrayIcon(OnTrayLeftClick, OnTrayRightClick);
         State = new(true, true, true, false, false);
         StartMetricSampling();
@@ -181,6 +209,7 @@ public sealed class StartupShellController : IDisposable
 
         var wasVisible = State.IsPerformanceBarVisible;
         _host.SetPerformanceBarVisible(visible: true, activate: true);
+        RestorePlacementIfPortChanged();
         State = State with { IsPerformanceBarVisible = true };
         if (!wasVisible)
         {
@@ -216,6 +245,7 @@ public sealed class StartupShellController : IDisposable
                 break;
             case ShellMenuAction.Exit:
                 StopMetricSampling();
+                _placementPersistence?.Flush();
                 State = new(false, false, false, false, false);
                 _host.Shutdown();
                 break;
@@ -229,8 +259,9 @@ public sealed class StartupShellController : IDisposable
             throw new InvalidOperationException("应用未运行时不能更改设置。");
         }
 
-        var next = Settings.Apply(patch);
+        var next = Settings.Apply(patch).WithWidget(LastPlacementSnapshot());
         _settingsStore?.Save(next);
+        _placementPersistence?.ClearPending();
 
         var samplingIntervalChanged =
             Settings.FastRefreshMilliseconds != next.FastRefreshMilliseconds ||
@@ -273,6 +304,7 @@ public sealed class StartupShellController : IDisposable
         finally
         {
             _isPerformanceBarNativeMoveActive = false;
+            SettlePlacement();
             if (CanSampleMetrics)
             {
                 StartMetricSampling();
@@ -307,12 +339,149 @@ public sealed class StartupShellController : IDisposable
         State = State with { IsPerformanceBarVisible = visible };
         if (visible)
         {
+            RestorePlacementIfPortChanged();
             StartMetricSampling();
         }
         else
         {
             StopMetricSampling();
         }
+    }
+
+    private WidgetPlacement LastPlacementSnapshot()
+    {
+        lock (_placementSync)
+        {
+            return _lastPlacement;
+        }
+    }
+
+    /// <summary>
+    /// 窗口首次创建或重建后，把待恢复位置写入窗口框架；
+    /// 创建期的临时位置不参与保存，因此不会覆盖待恢复位置。
+    /// </summary>
+    private void RestorePlacementIfPortChanged()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        var port = _host.PerformanceBarPlacement;
+        if (port is null || ReferenceEquals(port, _placementPort))
+        {
+            return;
+        }
+
+        _placementPort = port;
+        var displays = _displayEnvironmentSource?.GetDisplays();
+        if (displays is not { Count: > 0 })
+        {
+            return;
+        }
+
+        var stored = LastPlacementSnapshot();
+        var frame = port.ReadFrame();
+        var (restored, docked) = PlacementRules.RestorePlacement(
+            stored,
+            frame with { X = 0, Y = 0 },
+            displays,
+            PlacementInsets.Zero);
+        port.SetFramePosition(restored.X, restored.Y);
+        var placement = new WidgetPlacement { X = restored.X, Y = restored.Y, Docked = docked };
+        lock (_placementSync)
+        {
+            if (placement != _lastPlacement)
+            {
+                _lastPlacement = placement;
+            }
+        }
+
+        if (placement != stored)
+        {
+            _placementPersistence?.Schedule();
+        }
+    }
+
+    /// <summary>
+    /// 读取原生实际框架，按卡片中心解析目标显示器后结算贴边并写回；
+    /// 显示器消失时夹回可见工作区。重入门控防止摆窗触发的递归。
+    /// </summary>
+    private void SettlePlacement()
+    {
+        if (_disposed || !State.IsRunning || _isSettlingPlacement)
+        {
+            return;
+        }
+
+        var port = _placementPort ?? _host.PerformanceBarPlacement;
+        if (port is null)
+        {
+            return;
+        }
+
+        var displays = _displayEnvironmentSource?.GetDisplays();
+        if (displays is not { Count: > 0 })
+        {
+            return;
+        }
+
+        _isSettlingPlacement = true;
+        try
+        {
+            var frame = port.ReadFrame();
+            var centerDisplay = PlacementRules.FindDisplayByCenter(displays, frame);
+            var target = centerDisplay ?? PlacementRules.FindNearestDisplay(displays, frame);
+            if (target is not { } resolved)
+            {
+                return;
+            }
+
+            if (centerDisplay is null)
+            {
+                // 卡片中心不在任何显示器内（目标显示器消失等）：先夹回可见工作区。
+                frame = PlacementRules.ClampIntoWorkArea(frame, resolved);
+            }
+
+            var (settled, docked) = PlacementRules.SettleSnap(
+                frame,
+                resolved,
+                LastPlacementSnapshot().Docked,
+                PlacementInsets.Zero);
+            if (settled.X != frame.X || settled.Y != frame.Y)
+            {
+                port.SetFramePosition(settled.X, settled.Y);
+            }
+
+            var placement = new WidgetPlacement { X = settled.X, Y = settled.Y, Docked = docked };
+            lock (_placementSync)
+            {
+                if (placement == _lastPlacement)
+                {
+                    return;
+                }
+
+                _lastPlacement = placement;
+            }
+
+            _placementPersistence?.Schedule();
+        }
+        finally
+        {
+            _isSettlingPlacement = false;
+        }
+    }
+
+    private void OnDisplaysChanged(object? sender, EventArgs eventArgs) => SettlePlacement();
+
+    private void SavePlacement()
+    {
+        if (_settingsStore is null)
+        {
+            return;
+        }
+
+        _settingsStore.Save(Settings.WithWidget(LastPlacementSnapshot()));
     }
 
     private void OnTrayRightClick()
@@ -478,6 +647,13 @@ public sealed class StartupShellController : IDisposable
 
         _disposed = true;
         StopMetricSampling();
+        _placementPersistence?.Flush();
+        _placementPersistence?.Dispose();
+        if (_displayEnvironmentSource is not null)
+        {
+            _displayEnvironmentSource.DisplaysChanged -= OnDisplaysChanged;
+        }
+
         _metricsSampler?.Dispose();
         _slowMetricsSampler?.Dispose();
     }
