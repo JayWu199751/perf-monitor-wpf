@@ -737,12 +737,14 @@ public sealed class StartupShellController : IDisposable
                 resolved,
                 LastPlacementSnapshot().Docked,
                 PlacementInsets.Zero);
-            // 行内落点：中心在顶/底任务栏行内时垂直居中到行，行外回落普通贴边结果。
-            var (settled, docked, inRow) = TaskbarRowRules.SettleRowPlacement(
-                snapped,
+            // 行内落点：以结算前框架的中心与对应贴边落点判定（规格 F08）；
+            // 不满足前提时回落普通贴边结算结果。
+            var (rowSettled, rowDocked, inRow) = TaskbarRowRules.SettleRowPlacement(
+                frame,
                 resolved,
                 snappedDocked,
                 Settings.CenterInTaskbarRow);
+            var (settled, docked) = inRow ? (rowSettled, rowDocked) : (snapped, snappedDocked);
             if (settled.X != frame.X || settled.Y != frame.Y)
             {
                 port.SetFramePosition(settled.X, settled.Y);
