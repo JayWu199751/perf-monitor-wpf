@@ -9,6 +9,7 @@
         MinHeight="240"
         ResizeMode="NoResize"
         WindowStartupLocation="CenterScreen"
+        ShowInTaskbar="False"
         FontFamily="Segoe UI Variable Text, Segoe UI, Microsoft YaHei UI"
         FontSize="13"
         Background="{DynamicResource PageBackgroundBrush}"

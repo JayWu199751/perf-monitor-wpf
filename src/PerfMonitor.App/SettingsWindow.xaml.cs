@@ -8,6 +8,8 @@ using System.Windows.Threading;
 using PerfMonitor.Core.Settings;
 using PerfMonitor.Core.Shell;
 using SharedNativeMethods = PerfMonitor.Windows.Native.NativeMethods;
+using NativeWindowStyles = PerfMonitor.Windows.Shell.NativeWindowStyles;
+using WindowInteropHelper = System.Windows.Interop.WindowInteropHelper;
 using ComboBox = System.Windows.Controls.ComboBox;
 using Color = System.Windows.Media.Color;
 using Microsoft.Win32;
@@ -41,6 +43,8 @@ public partial class SettingsWindow : Window
         Closed += (_, _) => StopListeningForThemeChanges();
         SourceInitialized += (_, _) => UpdateMaxHeightForCurrentScreen();
         LocationChanged += (_, _) => UpdateMaxHeightForCurrentScreen();
+        // ShowInTaskbar=false 的所有权机制不影响 Alt+Tab；Loaded 后补工具窗口样式隐匿任务切换器（ADR 0007）。
+        Loaded += (_, _) => NativeWindowStyles.ExcludeFromTaskSwitcher(new WindowInteropHelper(this).Handle);
 #if DEBUG
         AutostartToggle.IsEnabled = false;
         AutostartDisabledNote.Visibility = Visibility.Visible;

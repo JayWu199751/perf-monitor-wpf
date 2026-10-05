@@ -1,4 +1,4 @@
-# 验收矩阵 A01–A46（工票 15）
+# 验收矩阵 A01–A47（工票 15；A47 为 ADR-0007 增补）
 
 状态：矩阵已建立（2026-10-05，工票 15）。每项逐条核实了自动化/集成证据与工票 Comments；**真实桌面/硬件人工验证均未执行**，相应项按规格要求标「未验证」并附复验步骤指针。本文不声称任何项已通过人工验收。
 
@@ -66,13 +66,14 @@
 | A44 | F13 | 1小时稳态、50轮设置开关、20轮显隐，回收/稳定后内存平台不持续抬升；有托管/native诊断证据 | W/M | 未验证 | 压力步骤与判停标准已写入 docs/memory-benchmark.md | 全部实测。复验：按 docs/memory-benchmark.md「压力验证」节执行 |
 | A45 | F13 | 常驻依赖、窗口/订阅、字体Brush缓存、WMI/托盘/native句柄、在途任务与采样子进程都有生命周期/上限 | A/W/M | 部分证实 | A/W：回收定时器生命周期（`SettingsIdleRecycleTimerTests`）、退出清理整壳（`StartupShellContractTests` 退出组）、慢源取消/超时杀进程树（`WindowsSlowMetricsSourceTests` + 工票 06）、采样代际隔离与不重叠（`PerformanceMetricsContractTests`）、SystemEvents/显示源/托盘 HICON 释放（工票 11/12 Comments） | 字体/Brush 缓存上限、native 句柄真实计数、长时运行观察。复验：工票 12 复验第 3–4 步 + docs/memory-benchmark.md 压力验证 |
 | A46 | F13 | 至少记录关键候选方案或优化前后Private Bytes；完整功能不缩水，CPU/拖动/启动体验同时报告 | M | 未验证 | 内存预算与口径见 `rewrite-wpf/memory-budget.md`、`docs/memory-benchmark.md`；不预填数字 | 全部实测与记录。复验：按 docs/memory-benchmark.md 记录每轮 Private Bytes/CPU/启动/拖动体验与功能矩阵 |
+| A47 | F01 | 悬浮条与设置窗从 Alt+Tab 与任务视图隐匿（ADR-0007）；任务栏无按钮维持不变 | W/M | 部分证实 | 运行时窗口样式实测（`.scratch/win_style_probe.py`）：修复前悬浮条 exstyle=`0x00080008` 无 `WS_EX_TOOLWINDOW` 且被 WPF 隐藏所有者持有（Alt+Tab 泄漏，用户截图 2026-10-05）；修复后 `0x00080088` 含 `WS_EX_TOOLWINDOW`；设置窗走同一 `NativeWindowStyles` 入口 | 真实桌面按 Alt+Tab 与 Win+Tab 人工确认无「性能小窗」「性能小窗 · 设置」条目；设置窗失焦后经托盘「设置」找回。最小复验：启动应用按 Alt+Tab/Win+Tab 观察；打开设置窗后切到桌面再按 Alt+Tab |
 
 ## 汇总统计（2026-10-05）
 
 | 状态 | 数量 | 编号 |
 | --- | --- | --- |
 | 已证实（A/W 全覆盖） | 7 | A04, A05, A10, A13, A14, A22, A34 |
-| 部分证实（A/W 有证据，M 层未验证） | 30 | A01, A02, A03, A06, A07, A09, A11, A12, A15, A20, A21, A23, A24, A25, A26, A27, A28, A29, A30, A31, A33, A35, A36, A37, A38, A39, A40, A41, A42, A45 |
+| 部分证实（A/W 有证据，M 层未验证） | 31 | A01, A02, A03, A06, A07, A09, A11, A12, A15, A20, A21, A23, A24, A25, A26, A27, A28, A29, A30, A31, A33, A35, A36, A37, A38, A39, A40, A41, A42, A45, A47 |
 | 未验证 | 9 | A08, A16, A17, A18, A19, A32, A43, A44, A46 |
 
 - 186 项自动化测试（Core 139 + Windows 47）全过、0 警告（docs/release.md，2026-10-05）。

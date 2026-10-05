@@ -5,6 +5,7 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using PerfMonitor.Core.Shell;
 using PerfMonitor.Windows.Displays;
+using PerfMonitor.Windows.Shell;
 using WpfSize = System.Windows.Size;
 
 namespace PerfMonitor.App;
@@ -21,6 +22,9 @@ public partial class PerformanceBarWindow : Window, IPerformanceBarPlacementPort
         // 分层窗口中，Alpha=0 的完全透明像素会穿透输入；Alpha=1 保持近透明外观并接收命中。
         Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(1, 0, 0, 0));
         Loaded += (_, _) => RefreshNaturalWidth();
+        // WPF 以隐藏所有者窗口实现 ShowInTaskbar=false：任务栏无按钮，但 Alt+Tab 仍列出悬浮卡片；
+        // 样式设置完成后补写 WS_EX_TOOLWINDOW，从任务切换器整体隐匿（ADR 0007）。
+        Loaded += (_, _) => NativeWindowStyles.ExcludeFromTaskSwitcher(WindowHandle);
     }
 
     public event EventHandler? ContextMenuRequested;

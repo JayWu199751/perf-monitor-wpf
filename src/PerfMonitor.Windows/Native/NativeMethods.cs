@@ -13,6 +13,12 @@ public static class NativeMethods
 
     public const int DpiEffective = 0;
 
+    /// <summary>GetWindowLong/SetWindowLong 的扩展样式索引。</summary>
+    public const int GwlExstyle = -20;
+
+    /// <summary>工具窗口扩展样式；任务栏、Alt+Tab 与任务视图一致排除该类窗口。</summary>
+    public const int WsExToolWindow = 0x0080;
+
     [StructLayout(LayoutKind.Sequential)]
     public struct NativeRect
     {
@@ -92,4 +98,12 @@ public static class NativeMethods
 
     [DllImport("user32.dll")]
     public static extern nint WindowFromPoint(NativePoint point);
+
+    /// <summary>读取扩展样式；GWL_EXSTYLE 为 32 位样式值，W 版入口在 x64 上同样适用。</summary>
+    [DllImport("user32.dll", EntryPoint = "GetWindowLongW")]
+    public static extern int GetWindowLong(nint window, int index);
+
+    /// <summary>写入扩展样式并返回旧值；GWL_EXSTYLE 为 32 位样式值，W 版入口在 x64 上同样适用。</summary>
+    [DllImport("user32.dll", EntryPoint = "SetWindowLongW")]
+    public static extern int SetWindowLong(nint window, int index, int value);
 }
