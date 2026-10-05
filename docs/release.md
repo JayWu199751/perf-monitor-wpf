@@ -44,7 +44,15 @@ dotnet publish src/PerfMonitor.App/PerfMonitor.App.csproj -c Release -r win-x64 
 - 自包含 173 MB / 依赖框架 0.9 MB，两者均发布成功且静态验证等价（PE Subsystem=2、asInvoker、图标与版本信息一致）。
 - 本机与自用目标机已确认安装 .NET 10 Desktop Runtime，依赖框架即满足「可运行」要求，体积小约 200 倍，故选依赖框架；自包含命令作为运行时缺失时的备选。
 - 单文件（`-p:PublishSingleFile=true`）与裁剪（`-p:PublishTrimmed=true`）：**未采用**（未做启动实测；WPF 单文件/裁剪存在已知兼容风险，自用场景无此需求）。
-- 不引入安装器（规格既定）。
+- 规格未要求安装器（`spec.md` F12 只要求可运行产物与构建命令）。仓库另附一份**可选的当前用户级安装器** `installer/perfmonitor.iss`（Inno Setup 6，`PrivilegesRequired=lowest`，默认装到 `%LOCALAPPDATA%\Programs\PerfMonitorWpf`），自用重装/换机时使用；发布核验以 `publish/fdd` 直接运行为准。
+
+  编译（需先完成上面的 fdd 发布，安装脚本从 `publish/fdd` 取文件）：
+
+  ```
+  "%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe" installer\perfmonitor.iss
+  ```
+
+  产物：`installer\Output\PerfMonitorWpf-<版本>-setup.exe`。安装器图标取 `publish/fdd/Resources/icon.ico`，因此改图标后需重新发布再编译才会更新。
 
 ## 权限说明汇总
 
@@ -85,5 +93,6 @@ schtasks /Delete /TN PerfMonitorWpf /F
 - 内嵌 manifest：`requestedExecutionLevel level="asInvoker"`，无 requireAdministrator/highestAvailable，含 PerMonitorV2 DPI 声明。
 - 版本信息（Win32 VerQueryValue 实读）：FileDescription=性能小窗（PerfMonitor WPF 版）、FileVersion=1.0.0.0、ProductName=性能小窗、Copyright © 2026。
 - 应用图标：icon.ico（16/24/32/48/256 五尺寸）通过 ApplicationIcon 嵌入 exe 资源段（内嵌 5 个 PNG 图像）。
+- 图标图形（2026-10-06 起，工票 16）：统一为**描边圆角方框**，线条加粗 ×1.25（框描边 20px→25px @256），外接框占位 235×215 不变；托盘明暗各 5 档与 ICO 五尺寸全部由 `tools/gen-icon.py` 从母图 `tools/assets/icon-master.png` 生成，可复现。旧文档所称「三柱」为沿袭错述，已纠正。
 - Debug 构建 smoke：进程启动、6 秒存活、优雅退出正常。
 - 全量测试：47 + 139 = 186 项通过，0 失败。

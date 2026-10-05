@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>性能小窗 · WPF 交互原型</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath fill='%2318243a' d='M3 18h7v11H3zm11-13h7v24h-7zm11 8h6v16h-6z'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3.5' y='3.5' width='25' height='25' rx='7' fill='none' stroke='%2318243a' stroke-width='3.5'/%3E%3C/svg%3E">
 <style>
 :root{color-scheme:light;--page:#f3f6fa;--ink:#18243a;--muted:#627087;--rule:#dce3ed;--blue:#0071e3;--fs:12px}
 *{box-sizing:border-box}body{margin:0;background:var(--page);color:var(--ink);font-family:'Segoe UI Variable Text','Segoe UI','Microsoft YaHei',sans-serif;font-size:14px;line-height:1.5}button,input,select{font:inherit}button{cursor:pointer}button:disabled{cursor:default}button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid #4c9deb;outline-offset:3px}button{color:inherit}a{color:#0768bd}button,select{touch-action:manipulation}
@@ -40,7 +40,7 @@
         <div class="wallpaper" aria-hidden="true"><div class="ribbon"></div><div class="ribbon second"></div></div>
         <div class="desktop-icon" aria-hidden="true"><div class="folder"></div><span>文件</span></div><div class="desktop-icon recycle" aria-hidden="true"><div class="bin"></div><span>回收站</span></div>
         <div class="desk-note"><strong>只占视线边缘的一行。</strong>托盘左键显隐，小窗右键打开菜单。<br>数值不可用时保留位置并显示 --。</div>
-        <div id="full-scene" class="full-scene" hidden><div class="full-symbol">⛶</div><h2>其他应用正在全屏</h2><p>小窗可自动隐藏。你的手动显示或隐藏优先于自动行为。</p><div class="full-note">可点击托盘三柱图标手动显示</div></div>
+        <div id="full-scene" class="full-scene" hidden><div class="full-symbol">⛶</div><h2>其他应用正在全屏</h2><p>小窗可自动隐藏。你的手动显示或隐藏优先于自动行为。</p><div class="full-note">可点击托盘图标手动显示</div></div>
         <div id="paused" class="paused-badge" hidden>小窗隐藏 · 采样暂停</div>
         <div id="widget-host" class="widget-host app-surface" data-theme="dark" role="group" tabindex="0" aria-label="性能小窗，可拖动；按菜单键打开右键菜单"><div id="widget" class="widget"></div></div>
         <div class="taskbar" aria-label="模拟任务栏">
