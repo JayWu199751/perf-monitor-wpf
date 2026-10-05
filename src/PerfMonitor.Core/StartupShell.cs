@@ -384,8 +384,15 @@ public sealed class StartupShellController : IDisposable
         }
 
         var next = Settings.Apply(patch);
-        if (patch.Autostart is { } requestedAutostart && _autostartPort is { } autostartPort)
+        if (patch.Autostart is { } requestedAutostart)
         {
+            if (_autostartPort is not { } autostartPort)
+            {
+                // 端口不可用（Debug 构建等）时自启无法在系统中生效，按失败路径处理：
+                // 不发布新 Settings、不持久化，与「失败不显示成功」语义一致。
+                throw new InvalidOperationException("当前环境不支持开机自启，已保留原设置。");
+            }
+
             var outcome = autostartPort.TrySetEnabled(requestedAutostart);
             if (outcome == AutostartRequestOutcome.Failed)
             {
