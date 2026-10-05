@@ -145,7 +145,6 @@ public sealed class StartupShellController : IDisposable
     private bool _isFullscreenActive;
     private bool _isAutoHiddenByFullscreen;
     private bool _isManuallyHidden;
-    private bool _isAutoHideSuppressedThisFullscreenSession;
     private bool _isFullscreenWatcherRunning;
     private bool _disposed;
 
@@ -247,7 +246,6 @@ public sealed class StartupShellController : IDisposable
         _isFullscreenActive = isFullscreen;
         if (isFullscreen)
         {
-            _isAutoHideSuppressedThisFullscreenSession = false;
             if (Settings.AutoHideOnFullscreen &&
                 !_isManuallyHidden &&
                 State.IsPerformanceBarVisible)
@@ -259,7 +257,6 @@ public sealed class StartupShellController : IDisposable
             return;
         }
 
-        _isAutoHideSuppressedThisFullscreenSession = false;
         if (_isAutoHiddenByFullscreen)
         {
             _isAutoHiddenByFullscreen = false;
@@ -277,10 +274,6 @@ public sealed class StartupShellController : IDisposable
         // 重复启动唤起是明确的手动显示入口，清两种隐藏标记并遵守同全屏周期的抑制。
         _isManuallyHidden = false;
         _isAutoHiddenByFullscreen = false;
-        if (_isFullscreenActive)
-        {
-            _isAutoHideSuppressedThisFullscreenSession = true;
-        }
 
         var wasVisible = State.IsPerformanceBarVisible;
         _host.SetPerformanceBarVisible(visible: true, activate: true);
@@ -450,10 +443,6 @@ public sealed class StartupShellController : IDisposable
             // 手动显示清两种隐藏标记；同一全屏周期内手动显示后保持显示。
             _isManuallyHidden = false;
             _isAutoHiddenByFullscreen = false;
-            if (_isFullscreenActive)
-            {
-                _isAutoHideSuppressedThisFullscreenSession = true;
-            }
         }
         else
         {
@@ -700,7 +689,6 @@ public sealed class StartupShellController : IDisposable
 
         _isFullscreenWatcherRunning = false;
         _isFullscreenActive = false;
-        _isAutoHideSuppressedThisFullscreenSession = false;
         _fullscreenWatcher?.Stop();
     }
 
