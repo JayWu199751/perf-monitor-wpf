@@ -1,4 +1,5 @@
 using PerfMonitor.Core.Metrics;
+using PerfMonitor.Core.Settings;
 
 namespace PerfMonitor.Core.Shell;
 
@@ -62,6 +63,17 @@ public interface IStartupShellHost
 
     void ShowSettingsWindow();
 
+    ISettingsStore? SettingsStore => null;
+
+    void ShowSettingsWindow(
+        PerformanceSettings settings,
+        Func<SettingsPatch, PerformanceSettings> updateSettings,
+        bool recoveredInvalidSettings) => ShowSettingsWindow();
+
+    void ApplySettings(PerformanceSettings settings)
+    {
+    }
+
     void HideSettingsWindow();
 
     void SetMetricGeneration(long generation);
@@ -80,32 +92,45 @@ public sealed class StartupShellController : IDisposable
     ]);
 
     private readonly IStartupShellHost _host;
+    private readonly ISettingsStore? _settingsStore;
     private readonly PerformanceMetricsSampler? _metricsSampler;
     private readonly PerformanceSlowMetricsSampler? _slowMetricsSampler;
     private readonly object _metricsSnapshotSync = new();
     private PerformanceMetricsSnapshot? _latestMetricsSnapshot;
     private long _metricsGeneration;
+    private bool _isPerformanceBarNativeMoveActive;
     private bool _disposed;
 
     public StartupShellController(
         IStartupShellHost host,
-        int fastRefreshMilliseconds = PerformanceMetricsSampler.DefaultFastRefreshMilliseconds,
-        int slowRefreshMilliseconds = PerformanceSlowMetricsSampler.DefaultRefreshMilliseconds)
+        int? fastRefreshMilliseconds = null,
+        int? slowRefreshMilliseconds = null)
     {
         _host = host;
+        _settingsStore = host.SettingsStore;
+        var loadedSettings = (_settingsStore?.Load() ?? PerformanceSettings.Default).Validate();
+        Settings = (loadedSettings with
+        {
+            FastRefreshMilliseconds = fastRefreshMilliseconds ?? loadedSettings.FastRefreshMilliseconds,
+            SlowRefreshMilliseconds = slowRefreshMilliseconds ?? loadedSettings.SlowRefreshMilliseconds
+        }).Validate();
         _host.SetPerformanceBarMoveRequestHandler(OnPerformanceBarNativeMoveRequested);
         if (host.SystemMetricsSource is { } source)
         {
-            _metricsSampler = new PerformanceMetricsSampler(source, PublishMetrics, fastRefreshMilliseconds);
+            _metricsSampler = new PerformanceMetricsSampler(source, PublishMetrics, Settings.FastRefreshMilliseconds);
         }
 
         if (host.SlowMetricsSource is { } slowSource)
         {
-            _slowMetricsSampler = new PerformanceSlowMetricsSampler(slowSource, PublishSlowMetrics, slowRefreshMilliseconds);
+            _slowMetricsSampler = new PerformanceSlowMetricsSampler(slowSource, PublishSlowMetrics, Settings.SlowRefreshMilliseconds);
         }
     }
 
     public StartupShellState State { get; private set; } = new(false, false, false, false, false);
+
+    public PerformanceSettings Settings { get; private set; }
+
+    public bool RecoveredInvalidSettingsOnStartup => _settingsStore?.RecoveredInvalidSettingsOnLastLoad ?? false;
 
     public StartupAccessDecision Start(StartupAccessContext context)
     {
@@ -138,6 +163,7 @@ public sealed class StartupShellController : IDisposable
             return;
         }
 
+        _host.ApplySettings(Settings);
         _host.ShowPerformanceBar(activate: false);
         _host.CreateTrayIcon(OnTrayLeftClick, OnTrayRightClick);
         State = new(true, true, true, false, false);
@@ -151,8 +177,13 @@ public sealed class StartupShellController : IDisposable
             return;
         }
 
+        var wasVisible = State.IsPerformanceBarVisible;
         _host.SetPerformanceBarVisible(visible: true, activate: true);
         State = State with { IsPerformanceBarVisible = true };
+        if (!wasVisible)
+        {
+            StartMetricSampling();
+        }
     }
 
     public void SelectMenuItem(ShellMenuAction action)
@@ -165,7 +196,7 @@ public sealed class StartupShellController : IDisposable
         switch (action)
         {
             case ShellMenuAction.OpenSettings:
-                _host.ShowSettingsWindow();
+                _host.ShowSettingsWindow(Settings, UpdateSettings, RecoveredInvalidSettingsOnStartup);
                 State = State with
                 {
                     IsSettingsWindowCreated = true,
@@ -180,6 +211,36 @@ public sealed class StartupShellController : IDisposable
         }
     }
 
+    public PerformanceSettings UpdateSettings(SettingsPatch patch)
+    {
+        if (!State.IsRunning)
+        {
+            throw new InvalidOperationException("应用未运行时不能更改设置。");
+        }
+
+        var next = Settings.Apply(patch);
+        _settingsStore?.Save(next);
+
+        var samplingIntervalChanged =
+            Settings.FastRefreshMilliseconds != next.FastRefreshMilliseconds ||
+            Settings.SlowRefreshMilliseconds != next.SlowRefreshMilliseconds;
+        if (samplingIntervalChanged)
+        {
+            StopMetricSampling();
+            _metricsSampler?.SetFastRefreshMilliseconds(next.FastRefreshMilliseconds);
+            _slowMetricsSampler?.SetRefreshMilliseconds(next.SlowRefreshMilliseconds);
+        }
+
+        Settings = next;
+        _host.ApplySettings(next);
+        if (samplingIntervalChanged && CanSampleMetrics)
+        {
+            StartMetricSampling();
+        }
+
+        return next;
+    }
+
     public void OnPerformanceBarRightClick()
     {
         ShowContextMenu(ShellMenuOrigin.PerformanceBar);
@@ -192,7 +253,20 @@ public sealed class StartupShellController : IDisposable
             return;
         }
 
-        _host.BeginPerformanceBarNativeMove();
+        _isPerformanceBarNativeMoveActive = true;
+        StopMetricSampling();
+        try
+        {
+            _host.BeginPerformanceBarNativeMove();
+        }
+        finally
+        {
+            _isPerformanceBarNativeMoveActive = false;
+            if (CanSampleMetrics)
+            {
+                StartMetricSampling();
+            }
+        }
     }
 
     public void OnSettingsWindowClosed()
@@ -243,6 +317,11 @@ public sealed class StartupShellController : IDisposable
 
     private void StartMetricSampling()
     {
+        if (!CanSampleMetrics)
+        {
+            return;
+        }
+
         if (_metricsSampler is null)
         {
             if (_slowMetricsSampler is null)
@@ -259,6 +338,9 @@ public sealed class StartupShellController : IDisposable
         var currentGeneration = _metricsSampler.Start(SetMetricGeneration);
         _slowMetricsSampler?.Start(currentGeneration);
     }
+
+    private bool CanSampleMetrics =>
+        State.IsRunning && State.IsPerformanceBarVisible && !_isPerformanceBarNativeMoveActive;
 
     private void StopMetricSampling()
     {

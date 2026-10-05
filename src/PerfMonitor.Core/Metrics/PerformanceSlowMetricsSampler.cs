@@ -9,7 +9,7 @@ internal sealed class PerformanceSlowMetricsSampler : IDisposable
     private readonly SemaphoreSlim _samplingGate = new(1, 1);
     private readonly ISlowMetricsSource _source;
     private readonly Action<long, SlowMetricsReading> _publish;
-    private readonly int _refreshMilliseconds;
+    private int _refreshMilliseconds;
     private CancellationTokenSource? _activeGeneration;
     private long _generation;
     private bool _disposed;
@@ -32,6 +32,22 @@ internal sealed class PerformanceSlowMetricsSampler : IDisposable
         _source = source;
         _publish = publish;
         _refreshMilliseconds = refreshMilliseconds;
+    }
+
+    public void SetRefreshMilliseconds(int milliseconds)
+    {
+        if (!AllowedRefreshIntervals.Contains(milliseconds))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(milliseconds),
+                "慢通道刷新间隔只能是 3000 或 5000 毫秒。");
+        }
+
+        lock (_sync)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            _refreshMilliseconds = milliseconds;
+        }
     }
 
     public void Start(long generation)
@@ -125,7 +141,13 @@ internal sealed class PerformanceSlowMetricsSampler : IDisposable
                 }
 
                 PublishIfCurrent(generation, reading, cancellation, token);
-                await Task.Delay(_refreshMilliseconds, token).ConfigureAwait(false);
+                int refreshMilliseconds;
+                lock (_sync)
+                {
+                    refreshMilliseconds = _refreshMilliseconds;
+                }
+
+                await Task.Delay(refreshMilliseconds, token).ConfigureAwait(false);
             }
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)

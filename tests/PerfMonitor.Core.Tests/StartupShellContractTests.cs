@@ -1,5 +1,6 @@
 using PerfMonitor.Core.Shell;
 using PerfMonitor.Core.Metrics;
+using PerfMonitor.Core.Settings;
 
 namespace PerfMonitor.Core.Tests;
 
@@ -22,6 +23,196 @@ public sealed class StartupShellContractTests
         Assert.False(host.LastPerformanceBarShowActivated);
         Assert.Equal(1, host.TrayIconCreateCount);
         Assert.Equal(0, host.SettingsWindowShowCount);
+    }
+
+    [Fact(DisplayName = "指标设置从单一持久化真值加载并在表单更改时深合并保存")]
+    public void Settings_load_from_store_and_form_updates_are_validated_deep_merged_and_applied()
+    {
+        var initial = PerformanceSettings.Default with
+        {
+            Metrics = PerformanceSettings.Default.Metrics with { Memory = false },
+            FontSize = 15
+        };
+        var store = new RecordingSettingsStore(initial);
+        var host = new RecordingStartupShellHost(settingsStore: store);
+        var shell = new StartupShellController(host);
+        shell.Start();
+        host.ClickTrayRight();
+        host.SelectMenuItem(ShellMenuAction.OpenSettings);
+
+        var saved = host.UpdateSettings(new SettingsPatch
+        {
+            Metrics = new MetricsSettingsPatch { Cpu = false, Network = false },
+            FastRefreshMilliseconds = 2000,
+            Opacity = 0.83
+        });
+
+        Assert.False(saved.Metrics.Cpu);
+        Assert.False(saved.Metrics.Network);
+        Assert.False(saved.Metrics.Memory);
+        Assert.True(saved.Metrics.Gpu);
+        Assert.Equal(2000, saved.FastRefreshMilliseconds);
+        Assert.Equal(15, saved.FontSize);
+        Assert.Equal(0.85, saved.Opacity);
+        Assert.Equal(saved, shell.Settings);
+        Assert.Equal(saved, store.LastSaved);
+        Assert.Equal(saved, host.AppliedSettings[^1]);
+    }
+
+    [Fact(DisplayName = "持久化的刷新间隔控制启动后的下一次采样时刻")]
+    public async Task Persisted_fast_refresh_interval_controls_the_next_sample_after_startup()
+    {
+        var source = new CountingSystemMetricsSource();
+        var storedSettings = PerformanceSettings.Default with { FastRefreshMilliseconds = 5000 };
+        var host = new RecordingStartupShellHost(source, new RecordingSettingsStore(storedSettings));
+        using var shell = new StartupShellController(host);
+
+        shell.Start();
+        try
+        {
+            await source.WaitForCpuReadCountAsync(1, TimeSpan.FromSeconds(2));
+            await Task.Delay(1300);
+
+            Assert.Equal(1, source.CpuReadCount);
+        }
+        finally
+        {
+            shell.SelectMenuItem(ShellMenuAction.Exit);
+        }
+    }
+
+    [Fact(DisplayName = "运行中更改快刷新间隔会重排下一次采样")]
+    public async Task Changing_fast_refresh_interval_reschedules_the_next_sample()
+    {
+        var source = new CountingSystemMetricsSource();
+        var host = new RecordingStartupShellHost(source);
+        using var shell = new StartupShellController(host);
+
+        shell.Start();
+        try
+        {
+            await source.WaitForCpuReadCountAsync(1, TimeSpan.FromSeconds(2));
+            var readsBeforeUpdate = source.CpuReadCount;
+            shell.UpdateSettings(new SettingsPatch { FastRefreshMilliseconds = 5000 });
+
+            await source.WaitForCpuReadCountAsync(readsBeforeUpdate + 1, TimeSpan.FromSeconds(2));
+            await Task.Delay(1300);
+
+            Assert.Equal(readsBeforeUpdate + 1, source.CpuReadCount);
+        }
+        finally
+        {
+            shell.SelectMenuItem(ShellMenuAction.Exit);
+        }
+    }
+
+    [Fact(DisplayName = "运行中更改慢刷新间隔会重排下一次采样")]
+    public async Task Changing_slow_refresh_interval_reschedules_the_next_sample()
+    {
+        var source = new CountingSlowMetricsSource();
+        var host = new RecordingStartupShellHost(slowMetricsSource: source);
+        using var shell = new StartupShellController(host);
+
+        shell.Start();
+        try
+        {
+            await source.WaitForTemperatureReadCountAsync(1, TimeSpan.FromSeconds(2));
+            shell.UpdateSettings(new SettingsPatch { SlowRefreshMilliseconds = 5000 });
+
+            await source.WaitForTemperatureReadCountAsync(2, TimeSpan.FromSeconds(2));
+            await Task.Delay(3300);
+
+            Assert.Equal(2, source.TemperatureReadCount);
+        }
+        finally
+        {
+            shell.SelectMenuItem(ShellMenuAction.Exit);
+        }
+    }
+
+    [Fact(DisplayName = "性能条隐藏或原生拖动期间更改刷新率不会恢复采样")]
+    public async Task Refresh_change_does_not_resume_sampling_while_hidden_or_native_moving()
+    {
+        var source = new CountingSystemMetricsSource();
+        var host = new RecordingStartupShellHost(source);
+        using var shell = new StartupShellController(host);
+
+        shell.Start();
+        try
+        {
+            await source.WaitForCpuReadCountAsync(1, TimeSpan.FromSeconds(2));
+            host.ClickTrayLeft();
+            shell.UpdateSettings(new SettingsPatch { FastRefreshMilliseconds = 5000 });
+            await Task.Delay(1200);
+            Assert.Equal(1, source.CpuReadCount);
+
+            host.ClickTrayLeft();
+            await source.WaitForCpuReadCountAsync(2, TimeSpan.FromSeconds(2));
+
+            var readsDuringNativeMove = -1;
+            host.DuringNativeMove = () =>
+            {
+                shell.UpdateSettings(new SettingsPatch { FastRefreshMilliseconds = 1000 });
+                Thread.Sleep(1200);
+                readsDuringNativeMove = source.CpuReadCount;
+            };
+            host.RequestPerformanceBarNativeMove();
+
+            Assert.Equal(2, readsDuringNativeMove);
+            await source.WaitForCpuReadCountAsync(3, TimeSpan.FromSeconds(2));
+        }
+        finally
+        {
+            shell.SelectMenuItem(ShellMenuAction.Exit);
+        }
+    }
+
+    [Theory(DisplayName = "用户调整的不透明度按 0.05 步进并保留合法边界")]
+    [InlineData(0.83, 0.85)]
+    [InlineData(0.72, 0.70)]
+    [InlineData(0.20, 0.20)]
+    [InlineData(0.999, 1.00)]
+    public void Opacity_patches_are_quantized_to_five_percent_steps(double input, double expected)
+    {
+        var changed = PerformanceSettings.Default.Apply(new SettingsPatch { Opacity = input });
+
+        Assert.Equal(expected, changed.Opacity);
+    }
+
+    [Fact(DisplayName = "非法刷新间隔不会改变或持久化中央设置")]
+    public void Invalid_settings_patch_is_rejected_without_changing_or_saving_settings()
+    {
+        var store = new RecordingSettingsStore(PerformanceSettings.Default);
+        var host = new RecordingStartupShellHost(settingsStore: store);
+        var shell = new StartupShellController(host);
+        shell.Start();
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => shell.UpdateSettings(
+            new SettingsPatch { FastRefreshMilliseconds = 1500 }));
+
+        Assert.Equal(PerformanceSettings.Default, shell.Settings);
+        Assert.Null(store.LastSaved);
+    }
+
+    [Fact(DisplayName = "持久化失败时中央设置和性能条都保留上一个成功值")]
+    public void Save_failure_does_not_publish_or_apply_a_settings_change()
+    {
+        var store = new RecordingSettingsStore(PerformanceSettings.Default)
+        {
+            SaveFailure = new IOException("模拟文件写入失败")
+        };
+        var host = new RecordingStartupShellHost(settingsStore: store);
+        var shell = new StartupShellController(host);
+        shell.Start();
+
+        Assert.Throws<IOException>(() => shell.UpdateSettings(new SettingsPatch
+        {
+            Metrics = new MetricsSettingsPatch { Cpu = false }
+        }));
+
+        Assert.Equal(PerformanceSettings.Default, shell.Settings);
+        Assert.Single(host.AppliedSettings);
+        Assert.Null(store.LastSaved);
     }
 
     [Fact(DisplayName = "Debug 普通启动直接运行且不尝试提权")]
@@ -136,6 +327,30 @@ public sealed class StartupShellContractTests
 
         Assert.True(shell.State.IsPerformanceBarVisible);
         Assert.Equal((true, true), host.VisibilityChanges[^1]);
+    }
+
+    [Fact(DisplayName = "重复启动恢复隐藏性能条后立即恢复采样")]
+    public async Task Repeated_launch_resumes_sampling_after_restoring_hidden_bar()
+    {
+        var source = new CountingSystemMetricsSource();
+        var host = new RecordingStartupShellHost(source);
+        using var shell = new StartupShellController(host);
+
+        shell.Start();
+        try
+        {
+            await source.WaitForCpuReadCountAsync(1, TimeSpan.FromSeconds(2));
+            host.ClickTrayLeft();
+            await Task.Delay(1200);
+            Assert.Equal(1, source.CpuReadCount);
+
+            shell.OnRepeatedLaunchRequested();
+            await source.WaitForCpuReadCountAsync(2, TimeSpan.FromSeconds(2));
+        }
+        finally
+        {
+            shell.SelectMenuItem(ShellMenuAction.Exit);
+        }
     }
 
     [Fact(DisplayName = "托盘左键单击可切换性能条显隐")]
@@ -411,12 +626,25 @@ public sealed class StartupShellContractTests
         private readonly SemaphoreSlim _snapshotChanged = new(0);
         private Action? _performanceBarMoveRequestHandler;
 
-        public RecordingStartupShellHost(ISystemMetricsSource? systemMetricsSource = null)
+        public RecordingStartupShellHost(
+            ISystemMetricsSource? systemMetricsSource = null,
+            ISettingsStore? settingsStore = null,
+            ISlowMetricsSource? slowMetricsSource = null)
         {
             SystemMetricsSource = systemMetricsSource;
+            SettingsStore = settingsStore;
+            SlowMetricsSource = slowMetricsSource;
         }
 
         public ISystemMetricsSource? SystemMetricsSource { get; }
+
+        public ISlowMetricsSource? SlowMetricsSource { get; }
+
+        public ISettingsStore? SettingsStore { get; }
+
+        public List<PerformanceSettings> AppliedSettings { get; } = [];
+
+        private Func<SettingsPatch, PerformanceSettings>? _updateSettings;
 
         public List<(bool Visible, bool Activate)> VisibilityChanges { get; } = [];
 
@@ -459,6 +687,8 @@ public sealed class StartupShellContractTests
 
         public int NativeMoveStartCount { get; private set; }
 
+        public Action? DuringNativeMove { get; set; }
+
         public void SetPerformanceBarMoveRequestHandler(Action handler)
         {
             _performanceBarMoveRequestHandler = handler;
@@ -467,6 +697,7 @@ public sealed class StartupShellContractTests
         public void BeginPerformanceBarNativeMove()
         {
             NativeMoveStartCount++;
+            DuringNativeMove?.Invoke();
         }
 
         public void RequestPerformanceBarNativeMove() => _performanceBarMoveRequestHandler?.Invoke();
@@ -509,6 +740,20 @@ public sealed class StartupShellContractTests
             SettingsWindowShowCount++;
         }
 
+        public void ShowSettingsWindow(
+            PerformanceSettings settings,
+            Func<SettingsPatch, PerformanceSettings> updateSettings,
+            bool recoveredInvalidSettings)
+        {
+            SettingsWindowShowCount++;
+            _updateSettings = updateSettings;
+        }
+
+        public PerformanceSettings UpdateSettings(SettingsPatch patch) =>
+            _updateSettings?.Invoke(patch) ?? throw new InvalidOperationException("设置窗未创建");
+
+        public void ApplySettings(PerformanceSettings settings) => AppliedSettings.Add(settings);
+
         public void HideSettingsWindow()
         {
             SettingsWindowHideCount++;
@@ -548,6 +793,88 @@ public sealed class StartupShellContractTests
         {
             var index = Interlocked.Increment(ref _networkReadCount) - 1;
             return _snapshots[Math.Min(index, _snapshots.Length - 1)];
+        }
+    }
+
+    private sealed class CountingSystemMetricsSource : ISystemMetricsSource
+    {
+        private int _cpuReadCount;
+
+        public int CpuReadCount => Volatile.Read(ref _cpuReadCount);
+
+        public CpuTimeCounters? ReadCpuTimes()
+        {
+            Interlocked.Increment(ref _cpuReadCount);
+            return null;
+        }
+
+        public PhysicalMemoryCounters? ReadPhysicalMemory() => null;
+
+        public NetworkCountersSnapshot? ReadNetworkCounters() => null;
+
+        public async Task WaitForCpuReadCountAsync(int count, TimeSpan timeout)
+        {
+            var deadline = DateTime.UtcNow + timeout;
+            while (CpuReadCount < count)
+            {
+                var remaining = deadline - DateTime.UtcNow;
+                if (remaining <= TimeSpan.Zero)
+                {
+                    throw new TimeoutException($"未在时限内读取到 {count} 次 CPU 计数器。");
+                }
+
+                await Task.Delay(TimeSpan.FromMilliseconds(Math.Min(10, remaining.TotalMilliseconds)));
+            }
+        }
+    }
+
+    private sealed class CountingSlowMetricsSource : ISlowMetricsSource
+    {
+        private int _temperatureReadCount;
+
+        public int TemperatureReadCount => Volatile.Read(ref _temperatureReadCount);
+
+        public Task<GpuMetricsReading?> ReadGpuMetricsAsync(CancellationToken cancellationToken) =>
+            Task.FromResult<GpuMetricsReading?>(null);
+
+        public Task<int?> ReadCpuTemperatureCelsiusAsync(CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref _temperatureReadCount);
+            return Task.FromResult<int?>(null);
+        }
+
+        public async Task WaitForTemperatureReadCountAsync(int count, TimeSpan timeout)
+        {
+            var deadline = DateTime.UtcNow + timeout;
+            while (TemperatureReadCount < count)
+            {
+                var remaining = deadline - DateTime.UtcNow;
+                if (remaining <= TimeSpan.Zero)
+                {
+                    throw new TimeoutException($"未在时限内读取到 {count} 次温度计数器。");
+                }
+
+                await Task.Delay(TimeSpan.FromMilliseconds(Math.Min(10, remaining.TotalMilliseconds)));
+            }
+        }
+    }
+
+    private sealed class RecordingSettingsStore(PerformanceSettings initialSettings) : ISettingsStore
+    {
+        public PerformanceSettings? LastSaved { get; private set; }
+
+        public Exception? SaveFailure { get; init; }
+
+        public PerformanceSettings Load() => initialSettings;
+
+        public void Save(PerformanceSettings settings)
+        {
+            if (SaveFailure is not null)
+            {
+                throw SaveFailure;
+            }
+
+            LastSaved = settings;
         }
     }
 }
