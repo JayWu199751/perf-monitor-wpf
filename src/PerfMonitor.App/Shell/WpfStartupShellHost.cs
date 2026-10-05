@@ -5,6 +5,7 @@ using Forms = System.Windows.Forms;
 using PerfMonitor.Core.Shell;
 using PerfMonitor.Core.Metrics;
 using PerfMonitor.Core.Settings;
+using PerfMonitor.Windows.Fullscreen;
 using PerfMonitor.Windows.Metrics;
 using PerfMonitor.Windows.Settings;
 using WpfApplication = System.Windows.Application;
@@ -22,6 +23,7 @@ internal sealed class WpfStartupShellHost : IStartupShellHost, IDisposable
     private readonly PerformanceBarViewModel _performanceBarViewModel = new();
     private readonly WindowsSystemMetricsSource _systemMetricsSource = new();
     private readonly WindowsSlowMetricsSource _slowMetricsSource = new();
+    private readonly WindowsFullscreenWatcher _fullscreenWatcher = new();
     private readonly ISettingsStore _settingsStore;
     private PerformanceSettings _currentSettings = PerformanceSettings.Default;
     private Func<SettingsPatch, PerformanceSettings>? _updateSettings;
@@ -57,6 +59,8 @@ internal sealed class WpfStartupShellHost : IStartupShellHost, IDisposable
     public ISystemMetricsSource? SystemMetricsSource => _systemMetricsSource;
 
     public ISlowMetricsSource? SlowMetricsSource => _slowMetricsSource;
+
+    public IFullscreenWatcher? FullscreenWatcher => _fullscreenWatcher;
 
     public ISettingsStore? SettingsStore => _settingsStore;
 
@@ -246,6 +250,7 @@ internal sealed class WpfStartupShellHost : IStartupShellHost, IDisposable
         }
 
         _disposed = true;
+        _fullscreenWatcher.Dispose();
         _sharedContextMenu.IsOpen = false;
         _sharedContextMenu.Items.Clear();
         DisposeTrayIcon();
