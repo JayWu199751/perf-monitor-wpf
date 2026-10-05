@@ -14,6 +14,7 @@ namespace PerfMonitor.App;
 
 public sealed class PerformanceBarViewModel : INotifyPropertyChanged
 {
+    private const string DigitWidthSpace = "\u2007";
     private long _metricGeneration;
     private string _cpuPercentageText = "--";
     private string _memoryPercentageText = "--";
@@ -102,11 +103,7 @@ public sealed class PerformanceBarViewModel : INotifyPropertyChanged
 
     public double LabelFontSize => Math.Clamp(_settings.FontSize * 0.82, 9, 12);
 
-    public double SecondaryFontSize => Math.Clamp(_settings.FontSize * 0.90, 9, 14);
-
     public double UnitFontSize => Math.Clamp(_settings.FontSize * 0.82, 8, 12);
-
-    public double SecondaryUnitFontSize => SecondaryFontSize * 0.92;
 
     public CornerRadius CornerRadius => new(_settings.FontSize * 0.8);
 
@@ -119,8 +116,8 @@ public sealed class PerformanceBarViewModel : INotifyPropertyChanged
     public double DividerHeight => _settings.FontSize;
 
     public Thickness CardPadding => _settings.TransparentDisplay
-        ? new Thickness(8, 6, 8, 6)
-        : new Thickness(7, 5, 7, 5);
+        ? new Thickness(8, 2, 8, 2)
+        : new Thickness(7, 2, 7, 2);
 
     public Thickness BorderThickness => _settings.TransparentDisplay ? new Thickness(0) : new Thickness(1);
 
@@ -266,9 +263,7 @@ public sealed class PerformanceBarViewModel : INotifyPropertyChanged
         UpdateThemeBrushes();
         OnPropertyChanged(nameof(FontSize));
         OnPropertyChanged(nameof(LabelFontSize));
-        OnPropertyChanged(nameof(SecondaryFontSize));
         OnPropertyChanged(nameof(UnitFontSize));
-        OnPropertyChanged(nameof(SecondaryUnitFontSize));
         OnPropertyChanged(nameof(CornerRadius));
         OnPropertyChanged(nameof(LabelGap));
         OnPropertyChanged(nameof(ReadingGap));
@@ -435,19 +430,37 @@ public sealed class PerformanceBarViewModel : INotifyPropertyChanged
             + System.Windows.SystemColors.WindowColor.B < 384;
     }
 
-    private static string FormatPercentage(int? value) => value is { } percentage
-        ? percentage.ToString(CultureInfo.InvariantCulture) + "%"
-        : "--";
+    private static string FormatPercentage(int? value)
+    {
+        if (value is not { } percentage)
+        {
+            return "--";
+        }
+
+        var formatted = percentage.ToString(CultureInfo.InvariantCulture) + "%";
+        return percentage is >= 0 and < 10 ? DigitWidthSpace + formatted : formatted;
+    }
 
     private static string FormatTemperatureValue(int? value) =>
         value is { } temperature
-            ? temperature.ToString(CultureInfo.InvariantCulture)
+            ? temperature is >= 0 and < 10
+                ? DigitWidthSpace + temperature.ToString(CultureInfo.InvariantCulture)
+                : temperature.ToString(CultureInfo.InvariantCulture)
             : "--";
 
-    private static string FormatNetworkSpeed(double? value) =>
-        value is { } speed
-            ? speed.ToString("0.0", CultureInfo.InvariantCulture)
-            : "--";
+    private static string FormatNetworkSpeed(double? value)
+    {
+        if (value is not { } speed)
+        {
+            return "--";
+        }
+
+        var formatted = speed.ToString("0.0", CultureInfo.InvariantCulture);
+        var decimalSeparatorIndex = formatted.IndexOf('.');
+        return decimalSeparatorIndex == 1 && formatted[0] is >= '0' and <= '9'
+            ? DigitWidthSpace + formatted
+            : formatted;
+    }
 
     private void SetField(ref string field, string value, [CallerMemberName] string? propertyName = null)
     {

@@ -30,19 +30,19 @@
                     TextOptions.TextFormattingMode="Display">
             <StackPanel Orientation="Horizontal" Visibility="{Binding CpuVisibility}">
                 <TextBlock Text="CPU" Foreground="{Binding LabelBrush}" FontSize="{Binding LabelFontSize}"
-                           FontWeight="SemiBold" VerticalAlignment="Center" />
+                           FontWeight="Bold" VerticalAlignment="Center" />
                 <TextBlock Text="{Binding CpuPercentageText, Mode=OneWay}"
                            Foreground="{Binding CpuPercentageBrush}"
-                           FontSize="{Binding FontSize}" FontWeight="SemiBold"
+                           FontSize="{Binding FontSize}" FontWeight="Bold"
                            Typography.NumeralAlignment="Tabular"
                            Margin="{Binding LabelGap}" VerticalAlignment="Center" />
                 <TextBlock Foreground="{Binding CpuTemperatureBrush}"
-                           FontSize="{Binding SecondaryFontSize}" FontWeight="Medium"
+                           FontSize="{Binding FontSize}" FontWeight="Bold"
                            Typography.NumeralAlignment="Tabular"
                            Margin="{Binding ReadingGap}" VerticalAlignment="Center">
                     <Run Text="{Binding CpuTemperatureValueText, Mode=OneWay}" />
                     <Run Text="{Binding CpuTemperatureUnitText, Mode=OneWay}"
-                         FontSize="{Binding SecondaryUnitFontSize}" BaselineAlignment="Superscript" />
+                         FontSize="{Binding FontSize}" BaselineAlignment="Baseline" />
                 </TextBlock>
             </StackPanel>
             <Border Width="1" Height="{Binding DividerHeight}" Background="{Binding DividerBrush}"
@@ -50,10 +50,10 @@
 
             <StackPanel Orientation="Horizontal" Visibility="{Binding MemoryVisibility}">
                 <TextBlock Text="内存" Foreground="{Binding LabelBrush}" FontSize="{Binding LabelFontSize}"
-                           FontWeight="SemiBold" VerticalAlignment="Center" />
+                           FontWeight="Bold" VerticalAlignment="Center" />
                 <TextBlock Text="{Binding MemoryPercentageText, Mode=OneWay}"
                            Foreground="{Binding MemoryPercentageBrush}"
-                           FontSize="{Binding FontSize}" FontWeight="SemiBold"
+                           FontSize="{Binding FontSize}" FontWeight="Bold"
                            Typography.NumeralAlignment="Tabular"
                            Margin="{Binding LabelGap}" VerticalAlignment="Center" />
             </StackPanel>
@@ -62,26 +62,26 @@
 
             <StackPanel Orientation="Horizontal" Visibility="{Binding GpuVisibility}">
                 <TextBlock Text="GPU" Foreground="{Binding LabelBrush}" FontSize="{Binding LabelFontSize}"
-                           FontWeight="SemiBold" VerticalAlignment="Center" />
+                           FontWeight="Bold" VerticalAlignment="Center" />
                 <TextBlock Text="{Binding GpuPercentageText, Mode=OneWay}"
                            Foreground="{Binding GpuPercentageBrush}"
-                           FontSize="{Binding FontSize}" FontWeight="SemiBold"
+                           FontSize="{Binding FontSize}" FontWeight="Bold"
                            Typography.NumeralAlignment="Tabular"
                            Margin="{Binding LabelGap}" VerticalAlignment="Center" />
                 <TextBlock Text="显存" Foreground="{Binding LabelBrush}" FontSize="{Binding LabelFontSize}"
-                           Margin="{Binding ReadingGap}" VerticalAlignment="Center" />
+                           FontWeight="Bold" Margin="{Binding ReadingGap}" VerticalAlignment="Center" />
                 <TextBlock Text="{Binding GpuMemoryPercentageText, Mode=OneWay}"
                            Foreground="{Binding GpuMemoryPercentageBrush}"
-                           FontSize="{Binding FontSize}" FontWeight="SemiBold"
+                           FontSize="{Binding FontSize}" FontWeight="Bold"
                            Typography.NumeralAlignment="Tabular"
                            Margin="{Binding LabelGap}" VerticalAlignment="Center" />
                 <TextBlock Foreground="{Binding GpuTemperatureBrush}"
-                           FontSize="{Binding SecondaryFontSize}" FontWeight="Medium"
+                           FontSize="{Binding FontSize}" FontWeight="Bold"
                            Typography.NumeralAlignment="Tabular"
                            Margin="{Binding ReadingGap}" VerticalAlignment="Center">
                     <Run Text="{Binding GpuTemperatureValueText, Mode=OneWay}" />
                     <Run Text="{Binding GpuTemperatureUnitText, Mode=OneWay}"
-                         FontSize="{Binding SecondaryUnitFontSize}" BaselineAlignment="Superscript" />
+                         FontSize="{Binding FontSize}" BaselineAlignment="Baseline" />
                 </TextBlock>
             </StackPanel>
             <Border Width="1" Height="{Binding DividerHeight}" Background="{Binding DividerBrush}"
@@ -89,31 +89,31 @@
 
             <StackPanel Orientation="Horizontal" Visibility="{Binding NetworkVisibility}">
                 <TextBlock Text="网络" Foreground="{Binding LabelBrush}" FontSize="{Binding LabelFontSize}"
-                           FontWeight="SemiBold" VerticalAlignment="Center" />
+                           FontWeight="Bold" VerticalAlignment="Center" />
                 <TextBlock Text="↓" Foreground="{Binding NetworkDownloadArrowBrush}" FontSize="{Binding FontSize}"
                            FontWeight="Bold" Margin="{Binding LabelGap}" VerticalAlignment="Center" />
                 <TextBlock Text="{Binding NetworkDownloadSpeedText, Mode=OneWay}"
                            Foreground="{Binding NetworkDownloadBrush}"
-                           FontSize="{Binding FontSize}" FontWeight="SemiBold"
+                           FontSize="{Binding FontSize}" FontWeight="Bold"
                            Typography.NumeralAlignment="Tabular" VerticalAlignment="Center" />
                 <TextBlock Text="MB/s" Foreground="{Binding NetworkDownloadUnitBrush}"
-                           FontSize="{Binding UnitFontSize}" FontWeight="SemiBold"
+                           FontSize="{Binding UnitFontSize}" FontWeight="Bold"
                            Margin="1,0,0,0" VerticalAlignment="Center" />
                 <TextBlock Text="↑" Foreground="{Binding NetworkUploadArrowBrush}" FontSize="{Binding FontSize}"
                            FontWeight="Bold" Margin="{Binding ReadingGap}" VerticalAlignment="Center" />
                 <TextBlock Text="{Binding NetworkUploadSpeedText, Mode=OneWay}"
                            Foreground="{Binding NetworkUploadBrush}"
-                           FontSize="{Binding FontSize}" FontWeight="SemiBold"
+                           FontSize="{Binding FontSize}" FontWeight="Bold"
                            Typography.NumeralAlignment="Tabular" VerticalAlignment="Center" />
                 <TextBlock Text="MB/s" Foreground="{Binding NetworkUploadUnitBrush}"
-                           FontSize="{Binding UnitFontSize}" FontWeight="SemiBold"
+                           FontSize="{Binding UnitFontSize}" FontWeight="Bold"
                            Margin="1,0,0,0" VerticalAlignment="Center" />
             </StackPanel>
             <Border Width="1" Height="{Binding DividerHeight}" Background="{Binding DividerBrush}"
                     Margin="{Binding DividerGap}" VerticalAlignment="Center" Visibility="{Binding NetworkDividerVisibility}" />
 
             <TextBlock Text="{Binding TimeText, Mode=OneWay}" Foreground="{Binding SecondaryBrush}"
-                       FontSize="{Binding FontSize}" FontWeight="SemiBold"
+                       FontSize="{Binding FontSize}" FontWeight="Bold"
                        Typography.NumeralAlignment="Tabular"
                        Visibility="{Binding TimeVisibility}" VerticalAlignment="Center" />
         </StackPanel>
