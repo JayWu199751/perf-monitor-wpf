@@ -30,6 +30,7 @@ public partial class App : WpfApplication
 
     protected override void OnExit(ExitEventArgs e)
     {
+        _shellController?.Dispose();
         _shellHost?.Dispose();
         _singleInstance?.Dispose();
         base.OnExit(e);

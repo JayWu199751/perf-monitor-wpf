@@ -10,6 +10,10 @@ public sealed class PerformanceBarViewModel : INotifyPropertyChanged
     private long _metricGeneration;
     private string _cpuPercentageText = "--%";
     private string _memoryPercentageText = "--%";
+    private string _gpuPercentageText = "--%";
+    private string _gpuMemoryPercentageText = "--%";
+    private string _gpuTemperatureText = "--°";
+    private string _cpuTemperatureText = "--°";
     private string _networkDownloadSpeedText = "--";
     private string _networkUploadSpeedText = "--";
 
@@ -25,6 +29,30 @@ public sealed class PerformanceBarViewModel : INotifyPropertyChanged
     {
         get => _memoryPercentageText;
         private set => SetField(ref _memoryPercentageText, value);
+    }
+
+    public string GpuPercentageText
+    {
+        get => _gpuPercentageText;
+        private set => SetField(ref _gpuPercentageText, value);
+    }
+
+    public string GpuMemoryPercentageText
+    {
+        get => _gpuMemoryPercentageText;
+        private set => SetField(ref _gpuMemoryPercentageText, value);
+    }
+
+    public string GpuTemperatureText
+    {
+        get => _gpuTemperatureText;
+        private set => SetField(ref _gpuTemperatureText, value);
+    }
+
+    public string CpuTemperatureText
+    {
+        get => _cpuTemperatureText;
+        private set => SetField(ref _cpuTemperatureText, value);
     }
 
     public string NetworkDownloadSpeedText
@@ -50,6 +78,10 @@ public sealed class PerformanceBarViewModel : INotifyPropertyChanged
 
         CpuPercentageText = FormatPercentage(snapshot.CpuPercentage);
         MemoryPercentageText = FormatPercentage(snapshot.MemoryPercentage);
+        GpuPercentageText = FormatPercentage(snapshot.GpuPercentage);
+        GpuMemoryPercentageText = FormatPercentage(snapshot.GpuMemoryPercentage);
+        GpuTemperatureText = FormatTemperature(snapshot.GpuTemperatureCelsius);
+        CpuTemperatureText = FormatTemperature(snapshot.CpuTemperatureCelsius);
         NetworkDownloadSpeedText = FormatNetworkSpeed(snapshot.NetworkDownloadMegabytesPerSecond);
         NetworkUploadSpeedText = FormatNetworkSpeed(snapshot.NetworkUploadMegabytesPerSecond);
     }
@@ -58,6 +90,11 @@ public sealed class PerformanceBarViewModel : INotifyPropertyChanged
         value is { } percentage
             ? percentage.ToString(CultureInfo.InvariantCulture) + "%"
             : "--%";
+
+    private static string FormatTemperature(int? value) =>
+        value is { } temperature
+            ? temperature.ToString(CultureInfo.InvariantCulture) + "°"
+            : "--°";
 
     private static string FormatNetworkSpeed(double? value) =>
         value is { } speed

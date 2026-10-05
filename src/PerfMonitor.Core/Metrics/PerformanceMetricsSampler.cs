@@ -28,7 +28,11 @@ public sealed record PerformanceMetricsSnapshot(
     double? MemoryTotalGiB,
     DateTimeOffset Timestamp,
     double? NetworkDownloadMegabytesPerSecond = null,
-    double? NetworkUploadMegabytesPerSecond = null);
+    double? NetworkUploadMegabytesPerSecond = null,
+    int? CpuTemperatureCelsius = null,
+    int? GpuPercentage = null,
+    int? GpuMemoryPercentage = null,
+    int? GpuTemperatureCelsius = null);
 
 public interface ISystemMetricsSource
 {
