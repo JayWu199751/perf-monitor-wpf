@@ -24,6 +24,120 @@ public sealed class StartupShellContractTests
         Assert.Equal(0, host.SettingsWindowShowCount);
     }
 
+    [Fact(DisplayName = "Debug 普通启动直接运行且不尝试提权")]
+    public void Debug_start_does_not_request_elevation()
+    {
+        var shell = new StartupShellController(new RecordingStartupShellHost());
+
+        var decision = shell.Start(new StartupAccessContext(
+            IsReleaseBuild: false,
+            IsElevated: false,
+            ElevationAlreadyAttempted: false,
+            HasExistingInstance: false,
+            IsElevationHandoff: false));
+
+        Assert.Equal(StartupAccessDecision.StartCurrentInstance, decision);
+    }
+
+    [Fact(DisplayName = "Release 普通启动最多请求一次提权")]
+    public void Release_start_requests_elevation_only_before_the_attempt_marker_is_set()
+    {
+        var shell = new StartupShellController(new RecordingStartupShellHost());
+        var firstLaunch = shell.Start(new StartupAccessContext(
+            IsReleaseBuild: true,
+            IsElevated: false,
+            ElevationAlreadyAttempted: false,
+            HasExistingInstance: false,
+            IsElevationHandoff: false));
+        var retriedLaunch = shell.Start(new StartupAccessContext(
+            IsReleaseBuild: true,
+            IsElevated: false,
+            ElevationAlreadyAttempted: true,
+            HasExistingInstance: false,
+            IsElevationHandoff: false));
+
+        Assert.Equal(StartupAccessDecision.StartCurrentInstanceAndAttemptElevation, firstLaunch);
+        Assert.Equal(StartupAccessDecision.StartCurrentInstance, retriedLaunch);
+    }
+
+    [Theory(DisplayName = "真实 elevated 令牌直接运行，不再次请求提权")]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Elevated_release_launch_never_requests_elevation(bool alreadyAttempted)
+    {
+        var shell = new StartupShellController(new RecordingStartupShellHost());
+
+        var decision = shell.Start(new StartupAccessContext(
+            IsReleaseBuild: true,
+            IsElevated: true,
+            ElevationAlreadyAttempted: alreadyAttempted,
+            HasExistingInstance: false,
+            IsElevationHandoff: false));
+
+        Assert.Equal(StartupAccessDecision.StartCurrentInstance, decision);
+    }
+
+    [Theory(DisplayName = "普通或管理员重复启动都通知现有实例")]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Repeated_release_launch_notifies_existing_instance(bool isElevated)
+    {
+        var shell = new StartupShellController(new RecordingStartupShellHost());
+
+        var decision = shell.Start(new StartupAccessContext(
+            IsReleaseBuild: true,
+            IsElevated: isElevated,
+            ElevationAlreadyAttempted: false,
+            HasExistingInstance: true,
+            IsElevationHandoff: false));
+
+        Assert.Equal(StartupAccessDecision.NotifyExistingInstanceAndExit, decision);
+    }
+
+    [Fact(DisplayName = "已提权的 runas 子进程只在有效交接时接管")]
+    public void Elevated_handoff_takes_over_the_existing_instance()
+    {
+        var shell = new StartupShellController(new RecordingStartupShellHost());
+
+        var decision = shell.Start(new StartupAccessContext(
+            IsReleaseBuild: true,
+            IsElevated: true,
+            ElevationAlreadyAttempted: true,
+            HasExistingInstance: true,
+            IsElevationHandoff: true));
+
+        Assert.Equal(StartupAccessDecision.HandOffToElevatedInstance, decision);
+    }
+
+    [Fact(DisplayName = "未提权的交接子进程退出并保留普通实例")]
+    public void Unprivileged_handoff_does_not_replace_the_existing_instance()
+    {
+        var shell = new StartupShellController(new RecordingStartupShellHost());
+
+        var decision = shell.Start(new StartupAccessContext(
+            IsReleaseBuild: true,
+            IsElevated: false,
+            ElevationAlreadyAttempted: true,
+            HasExistingInstance: true,
+            IsElevationHandoff: true));
+
+        Assert.Equal(StartupAccessDecision.RejectElevationHandoff, decision);
+    }
+
+    [Fact(DisplayName = "重复启动时即使性能条已隐藏也会手动显示并激活")]
+    public void Repeated_launch_shows_and_activates_a_hidden_performance_bar()
+    {
+        var host = new RecordingStartupShellHost();
+        var shell = new StartupShellController(host);
+        shell.Start();
+        host.ClickTrayLeft();
+
+        shell.OnRepeatedLaunchRequested();
+
+        Assert.True(shell.State.IsPerformanceBarVisible);
+        Assert.Equal((true, true), host.VisibilityChanges[^1]);
+    }
+
     [Fact(DisplayName = "托盘左键单击可切换性能条显隐")]
     public void Tray_left_click_toggles_performance_bar_visibility()
     {
