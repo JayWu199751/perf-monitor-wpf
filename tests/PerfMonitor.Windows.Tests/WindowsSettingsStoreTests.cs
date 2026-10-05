@@ -16,6 +16,7 @@ public sealed class WindowsSettingsStoreTests
             Metrics = PerformanceSettings.Default.Metrics with { Cpu = false, Time = false },
             FastRefreshMilliseconds = 5000,
             SlowRefreshMilliseconds = 5000,
+            CenterInTaskbarRow = true,
             Opacity = 0.85,
             FontSize = 17,
             Theme = BarTheme.Dark

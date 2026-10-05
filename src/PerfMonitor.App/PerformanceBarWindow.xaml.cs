@@ -34,6 +34,9 @@ public partial class PerformanceBarWindow : Window, IPerformanceBarPlacementPort
     public void SetFramePosition(double x, double y) =>
         NativeWindowFrame.SetPosition(WindowHandle, x, y);
 
+    /// <summary>卡片根窗口句柄；供任务栏 z-order 守卫等原生检查使用。</summary>
+    internal nint RootWindowHandle => WindowHandle;
+
     private nint WindowHandle => new WindowInteropHelper(this).EnsureHandle();
 
     internal void RefreshNaturalWidth(bool resetPeakWidth = false)
