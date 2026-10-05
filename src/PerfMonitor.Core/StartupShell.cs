@@ -608,9 +608,15 @@ public sealed class StartupShellController : IDisposable
         }
     }
 
-    private void OnTaskbarGuardFastTick(object? state)
+    private void OnTaskbarGuardFastTick(object? state) =>
+        RunTaskbarGuardTick(static guard => guard.EnsureAboveTaskbar());
+
+    private void OnTaskbarGuardSlowTick(object? state) =>
+        RunTaskbarGuardTick(static guard => guard.RefreshTaskbarHandles());
+
+    private void RunTaskbarGuardTick(Action<ITaskbarVisibilityGuardPort> tick)
     {
-        // 隐藏、退出或原生拖动期间跳过遮挡检查；隐藏态由 StopTaskbarGuard 直接停表。
+        // 隐藏、退出或原生拖动期间跳过；隐藏态由 StopTaskbarGuard 直接停表。
         if (_disposed || !State.IsRunning || !State.IsPerformanceBarVisible || _isPerformanceBarNativeMoveActive)
         {
             return;
@@ -618,23 +624,10 @@ public sealed class StartupShellController : IDisposable
 
         try
         {
-            _taskbarGuard?.EnsureAboveTaskbar();
-        }
-        catch (ObjectDisposedException)
-        {
-        }
-    }
-
-    private void OnTaskbarGuardSlowTick(object? state)
-    {
-        if (_disposed || !State.IsRunning || !State.IsPerformanceBarVisible || _isPerformanceBarNativeMoveActive)
-        {
-            return;
-        }
-
-        try
-        {
-            _taskbarGuard?.RefreshTaskbarHandles();
+            if (_taskbarGuard is { } guard)
+            {
+                tick(guard);
+            }
         }
         catch (ObjectDisposedException)
         {
@@ -835,14 +828,7 @@ public sealed class StartupShellController : IDisposable
 
         if (_metricsSampler is null)
         {
-            if (_slowMetricsSampler is null)
-            {
-                return;
-            }
-
-            var generation = Interlocked.Increment(ref _metricsGeneration);
-            SetMetricGeneration(generation);
-            _slowMetricsSampler.Start(generation);
+            RunSlowOnlyMetricsSampling(static (sampler, generation) => sampler.Start(generation));
             return;
         }
 
@@ -881,19 +867,25 @@ public sealed class StartupShellController : IDisposable
     {
         if (_metricsSampler is null)
         {
-            if (_slowMetricsSampler is null)
-            {
-                return;
-            }
-
-            var generation = Interlocked.Increment(ref _metricsGeneration);
-            SetMetricGeneration(generation);
-            _slowMetricsSampler.Stop(generation);
+            RunSlowOnlyMetricsSampling(static (sampler, generation) => sampler.Stop(generation));
             return;
         }
 
         var currentGeneration = _metricsSampler.Stop(SetMetricGeneration);
         _slowMetricsSampler?.Stop(currentGeneration);
+    }
+
+    /// <summary>仅有慢指标采样器时的启停：推进代数并交给慢采样器执行。</summary>
+    private void RunSlowOnlyMetricsSampling(Action<PerformanceSlowMetricsSampler, long> run)
+    {
+        if (_slowMetricsSampler is null)
+        {
+            return;
+        }
+
+        var generation = Interlocked.Increment(ref _metricsGeneration);
+        SetMetricGeneration(generation);
+        run(_slowMetricsSampler, generation);
     }
 
     private void SetMetricGeneration(long generation)

@@ -1,5 +1,5 @@
-using System.Runtime.InteropServices;
 using PerfMonitor.Core.Shell;
+using NativeMethods = PerfMonitor.Windows.Native.NativeMethods;
 
 namespace PerfMonitor.Windows.Shell;
 
@@ -17,12 +17,6 @@ public sealed class WindowsTaskbarVisibilityGuard : ITaskbarVisibilityGuardPort,
     private const uint SwpNoSize = 0x0001;
     private const uint SwpNoMove = 0x0002;
     private const uint SwpNoActivate = 0x0010;
-
-    private static readonly IReadOnlySet<string> TaskbarClassNames = new HashSet<string>(StringComparer.Ordinal)
-    {
-        "Shell_TrayWnd",
-        "Shell_SecondaryTrayWnd"
-    };
 
     private readonly Func<nint> _cardWindow;
     private readonly object _sync = new();
@@ -70,7 +64,7 @@ public sealed class WindowsTaskbarVisibilityGuard : ITaskbarVisibilityGuardPort,
 
             // 卡片中心点的最顶层可见窗口的根窗口是任务栏 → 卡片被任务栏遮挡。
             var hit = NativeMethods.WindowFromPoint(
-                new NativePoint { X = (rect.Left + rect.Right) / 2, Y = (rect.Top + rect.Bottom) / 2 });
+                new NativeMethods.NativePoint { X = (rect.Left + rect.Right) / 2, Y = (rect.Top + rect.Bottom) / 2 });
             if (hit == nint.Zero)
             {
                 return;
@@ -104,7 +98,7 @@ public sealed class WindowsTaskbarVisibilityGuard : ITaskbarVisibilityGuardPort,
         }
 
         var windows = new List<nint>();
-        var callback = new EnumWindowsProc((window, data) =>
+        var callback = new NativeMethods.EnumWindowsProc((window, data) =>
         {
             if (IsTaskbarClass(window))
             {
@@ -177,63 +171,6 @@ public sealed class WindowsTaskbarVisibilityGuard : ITaskbarVisibilityGuardPort,
             return false;
         }
 
-        return TaskbarClassNames.Contains(new string(buffer, 0, length));
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct NativePoint
-    {
-        public int X;
-
-        public int Y;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct NativeRect
-    {
-        public int Left;
-
-        public int Top;
-
-        public int Right;
-
-        public int Bottom;
-    }
-
-    private delegate bool EnumWindowsProc(nint window, nint data);
-
-    private static class NativeMethods
-    {
-        [DllImport("user32.dll")]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        internal static extern bool EnumWindows(EnumWindowsProc callback, nint data);
-
-        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
-        internal static extern int GetClassName(nint window, char[] buffer, int maxCount);
-
-        [DllImport("user32.dll")]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        internal static extern bool IsWindow(nint window);
-
-        [DllImport("user32.dll")]
-        internal static extern nint GetAncestor(nint window, uint flags);
-
-        [DllImport("user32.dll")]
-        internal static extern nint WindowFromPoint(NativePoint point);
-
-        [DllImport("user32.dll")]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        internal static extern bool GetWindowRect(nint window, out NativeRect rect);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        internal static extern bool SetWindowPos(
-            nint window,
-            nint insertAfter,
-            int x,
-            int y,
-            int width,
-            int height,
-            uint flags);
+        return TaskbarClassNames.All.Contains(new string(buffer, 0, length));
     }
 }

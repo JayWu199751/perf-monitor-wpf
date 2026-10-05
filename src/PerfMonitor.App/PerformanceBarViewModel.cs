@@ -312,12 +312,7 @@ public sealed class PerformanceBarViewModel : INotifyPropertyChanged
 
     private void UpdateThemeBrushes()
     {
-        var dark = _settings.Theme switch
-        {
-            BarTheme.Dark => true,
-            BarTheme.Light => false,
-            _ => IsDarkSystemTheme()
-        };
+        var dark = IsDarkEffectiveTheme(_settings.Theme);
         var background = dark
             ? Color.FromRgb(0x1D, 0x1D, 0x1F)
             : Color.FromRgb(0xFA, 0xFA, 0xFC);
@@ -429,6 +424,14 @@ public sealed class PerformanceBarViewModel : INotifyPropertyChanged
             + System.Windows.SystemColors.WindowColor.G
             + System.Windows.SystemColors.WindowColor.B < 384;
     }
+
+    /// <summary>按主题设置解析是否深色：System 主题跟随系统，单一来源供各处复用。</summary>
+    internal static bool IsDarkEffectiveTheme(BarTheme theme) => theme switch
+    {
+        BarTheme.Dark => true,
+        BarTheme.Light => false,
+        _ => IsDarkSystemTheme()
+    };
 
     private static string FormatPercentage(int? value)
     {
