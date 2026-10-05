@@ -28,4 +28,5 @@
 
 - 已同步 `codex/wpf-rewrite-integration` 的 `3978b8f`；合并时保留事项03提权/单实例接线、事项04 CPU 多处理器组聚合与亲和性恢复，以及事项05网络计数读取、差分字段和回归测试。性能条所有只读 `Run.Text` 绑定均显式设为 `Mode=OneWay`。
 - 同步后 `dotnet test PerfMonitor.sln --no-restore --verbosity minimal`：Core.Tests 31/31、Windows.Tests 3/3 通过。`dotnet build PerfMonitor.sln --no-restore --verbosity minimal`：成功，0 警告、0 错误；`git diff --check` 通过。
-- 本机 Windows 集成测试实际读取活动处理器组、恢复调用线程亲和性，并读取网卡接口表及单调时间戳。未验证持续真实网络流量、TUN/Hyper-V 同时启用时的用户可见速率与界面桌面体验；按上文复验步骤执行后再补人工证据。
+- Debug WinExe 实际启动 smoke：直接启动 `PerfMonitor.App.exe` 后等待 8 秒，进程仍运行；按 PID 枚举到一个可见“性能小窗”窗口。向该窗口发送 `WM_CLOSE` 成功，进程正常退出，ExitCode 0。此结果覆盖真实 ViewModel/原生接口表初始化链路及正常关闭。
+- 本机 Windows 集成测试实际读取活动处理器组、恢复调用线程亲和性，并读取网卡接口表及单调时间戳。仍未验证持续真实网络流量及 TUN/Hyper-V 同时启用时用户可见的速率/回退效果；按上文复验步骤执行后再补人工证据。
