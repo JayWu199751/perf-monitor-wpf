@@ -23,6 +23,7 @@
 
   <ItemGroup>
     <Content Include="Resources\icon.ico" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Resources\tray-light-*.png;Resources\tray-dark-*.png" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

@@ -37,6 +37,11 @@ public partial class PerformanceBarWindow : Window, IPerformanceBarPlacementPort
     /// <summary>卡片根窗口句柄；供任务栏 z-order 守卫等原生检查使用。</summary>
     internal nint RootWindowHandle => WindowHandle;
 
+    /// <summary>当前窗口的 DPI 缩放比；托盘图标按 16 × 该值就近选物理像素档位。</summary>
+    internal double DpiScale => PresentationSource.FromVisual(this) is { } source
+        ? source.CompositionTarget.TransformToDevice.M11
+        : 1.0;
+
     private nint WindowHandle => new WindowInteropHelper(this).EnsureHandle();
 
     internal void RefreshNaturalWidth(bool resetPeakWidth = false)
