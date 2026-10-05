@@ -17,6 +17,7 @@ internal sealed class WpfStartupShellHost : IStartupShellHost, IDisposable
     private PerformanceBarWindow? _performanceBar;
     private SettingsWindow? _settingsWindow;
     private Forms.NotifyIcon? _trayIcon;
+    private Action? _performanceBarMoveRequestHandler;
     private bool _shutdownRequested;
     private bool _disposed;
 
@@ -30,6 +31,16 @@ internal sealed class WpfStartupShellHost : IStartupShellHost, IDisposable
     public event EventHandler? PerformanceBarClosed;
 
     public event EventHandler? SettingsWindowCloseRequested;
+
+    public void SetPerformanceBarMoveRequestHandler(Action handler)
+    {
+        _performanceBarMoveRequestHandler = handler;
+    }
+
+    public void BeginPerformanceBarNativeMove()
+    {
+        _performanceBar?.BeginNativeMove();
+    }
 
     public void ShowPerformanceBar(bool activate)
     {
@@ -167,7 +178,8 @@ internal sealed class WpfStartupShellHost : IStartupShellHost, IDisposable
             return;
         }
 
-        _performanceBar = new PerformanceBarWindow();
+        _performanceBar = new PerformanceBarWindow(
+            () => _performanceBarMoveRequestHandler?.Invoke());
         _performanceBar.ContextMenuRequested += (_, _) => PerformanceBarRightClickRequested?.Invoke(this, EventArgs.Empty);
         _performanceBar.Closed += (_, _) =>
         {

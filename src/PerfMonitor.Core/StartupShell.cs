@@ -23,6 +23,10 @@ public sealed record StartupShellState(
 
 public interface IStartupShellHost
 {
+    void SetPerformanceBarMoveRequestHandler(Action handler);
+
+    void BeginPerformanceBarNativeMove();
+
     void ShowPerformanceBar(bool activate);
 
     void SetPerformanceBarVisible(bool visible, bool activate);
@@ -54,6 +58,7 @@ public sealed class StartupShellController
     public StartupShellController(IStartupShellHost host)
     {
         _host = host;
+        _host.SetPerformanceBarMoveRequestHandler(OnPerformanceBarNativeMoveRequested);
     }
 
     public StartupShellState State { get; private set; } = new(false, false, false, false, false);
@@ -97,6 +102,16 @@ public sealed class StartupShellController
     public void OnPerformanceBarRightClick()
     {
         ShowContextMenu(ShellMenuOrigin.PerformanceBar);
+    }
+
+    public void OnPerformanceBarNativeMoveRequested()
+    {
+        if (!State.IsRunning)
+        {
+            return;
+        }
+
+        _host.BeginPerformanceBarNativeMove();
     }
 
     public void OnSettingsWindowClosed()
