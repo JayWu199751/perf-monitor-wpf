@@ -127,6 +127,34 @@ public sealed class PerformanceMetricsContractTests
         Assert.Null(recovered.MemoryPercentage);
     }
 
+    [Fact(DisplayName = "慢通道首轮立即采样并将 GPU 与 ACPI 温度并入快照，不覆盖快通道读数")]
+    public async Task Slow_metrics_are_merged_into_the_user_visible_snapshot()
+    {
+        var slowSource = new SequenceSlowMetricsSource(
+            new GpuMetricsReading(UtilizationPercentage: 41, MemoryUtilizationPercentage: 52, TemperatureCelsius: 63),
+            cpuTemperatureCelsius: 38);
+        var host = new MetricsShellHost(
+            new SequenceSystemMetricsSource(
+                [new CpuTimeCounters(KernelTime: 100, UserTime: 50, IdleTime: 80)],
+                new PhysicalMemoryCounters(TotalPhysicalBytes: 8UL * 1024 * 1024 * 1024, AvailablePhysicalBytes: 3UL * 1024 * 1024 * 1024)),
+            slowSource);
+        var shell = new StartupShellController(host, slowRefreshMilliseconds: 3000);
+
+        shell.Start();
+        var snapshot = await host.ReadSnapshotUntilAsync(value =>
+            value.GpuPercentage is not null && value.CpuTemperatureCelsius is not null);
+        shell.SelectMenuItem(ShellMenuAction.Exit);
+
+        Assert.Equal(41, snapshot.GpuPercentage);
+        Assert.Equal(52, snapshot.GpuMemoryPercentage);
+        Assert.Equal(63, snapshot.GpuTemperatureCelsius);
+        Assert.Equal(38, snapshot.CpuTemperatureCelsius);
+        Assert.Equal(0, snapshot.CpuPercentage);
+        Assert.Equal(63, snapshot.MemoryPercentage);
+        Assert.Equal(1, slowSource.GpuReadCount);
+        Assert.Equal(1, slowSource.TemperatureReadCount);
+    }
+
     [Fact(DisplayName = "隐藏再显示会重建采样基线，旧代际在途读数不能覆盖新快照")]
     public async Task Hiding_and_showing_the_bar_discards_an_earlier_in_flight_generation()
     {
@@ -174,13 +202,17 @@ public sealed class PerformanceMetricsContractTests
         Assert.Throws<ArgumentOutOfRangeException>(() => new StartupShellController(host, 1500));
     }
 
-    private sealed class MetricsShellHost(ISystemMetricsSource source) : IStartupShellHost
+    private sealed class MetricsShellHost(
+        ISystemMetricsSource source,
+        ISlowMetricsSource? slowSource = null) : IStartupShellHost
     {
         private readonly Channel<PerformanceMetricsSnapshot> _snapshots = Channel.CreateUnbounded<PerformanceMetricsSnapshot>();
         private Action? _trayLeftClick;
         private long _currentGeneration;
 
         public ISystemMetricsSource? SystemMetricsSource { get; } = source;
+
+        public ISlowMetricsSource? SlowMetricsSource { get; } = slowSource;
 
         public void SetPerformanceBarMoveRequestHandler(Action handler)
         {
@@ -235,6 +267,20 @@ public sealed class PerformanceMetricsContractTests
 
         public async Task<PerformanceMetricsSnapshot> ReadNextSnapshotAsync() =>
             await _snapshots.Reader.ReadAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(3));
+
+        public async Task<PerformanceMetricsSnapshot> ReadSnapshotUntilAsync(
+            Func<PerformanceMetricsSnapshot, bool> predicate)
+        {
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+            while (true)
+            {
+                var snapshot = await _snapshots.Reader.ReadAsync(timeout.Token);
+                if (predicate(snapshot))
+                {
+                    return snapshot;
+                }
+            }
+        }
     }
 
     private sealed class SequenceSystemMetricsSource(
@@ -247,6 +293,30 @@ public sealed class PerformanceMetricsContractTests
             _cpuReadings.Count > 0 ? _cpuReadings.Dequeue() : null;
 
         public PhysicalMemoryCounters? ReadPhysicalMemory() => memoryReading;
+    }
+
+    private sealed class SequenceSlowMetricsSource(
+        GpuMetricsReading? gpuReading,
+        int? cpuTemperatureCelsius) : ISlowMetricsSource
+    {
+        private int _gpuReadCount;
+        private int _temperatureReadCount;
+
+        public int GpuReadCount => Volatile.Read(ref _gpuReadCount);
+
+        public int TemperatureReadCount => Volatile.Read(ref _temperatureReadCount);
+
+        public Task<GpuMetricsReading?> ReadGpuMetricsAsync(CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref _gpuReadCount);
+            return Task.FromResult(gpuReading);
+        }
+
+        public Task<int?> ReadCpuTemperatureCelsiusAsync(CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref _temperatureReadCount);
+            return Task.FromResult(cpuTemperatureCelsius);
+        }
     }
 
     private sealed class BlockingSystemMetricsSource : ISystemMetricsSource

@@ -47,6 +47,8 @@ public interface IStartupShellHost
 
     ISystemMetricsSource? SystemMetricsSource { get; }
 
+    ISlowMetricsSource? SlowMetricsSource => null;
+
     void ShowPerformanceBar(bool activate);
 
     void SetPerformanceBarVisible(bool visible, bool activate);
@@ -83,7 +85,8 @@ public sealed class StartupShellController
 
     public StartupShellController(
         IStartupShellHost host,
-        int fastRefreshMilliseconds = PerformanceMetricsSampler.DefaultFastRefreshMilliseconds)
+        int fastRefreshMilliseconds = PerformanceMetricsSampler.DefaultFastRefreshMilliseconds,
+        int slowRefreshMilliseconds = 3000)
     {
         _host = host;
         _host.SetPerformanceBarMoveRequestHandler(OnPerformanceBarNativeMoveRequested);

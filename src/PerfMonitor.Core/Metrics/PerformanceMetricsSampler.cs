@@ -8,19 +8,39 @@ public readonly record struct CpuTimeCounters(
 
 public readonly record struct PhysicalMemoryCounters(ulong TotalPhysicalBytes, ulong AvailablePhysicalBytes);
 
+public sealed record GpuMetricsReading(
+    int UtilizationPercentage,
+    int MemoryUtilizationPercentage,
+    int TemperatureCelsius);
+
+public sealed record SlowMetricsReading(
+    GpuMetricsReading? Gpu,
+    int? CpuTemperatureCelsius);
+
 public sealed record PerformanceMetricsSnapshot(
     long Generation,
     int? CpuPercentage,
     int? MemoryPercentage,
     double? MemoryUsedGiB,
     double? MemoryTotalGiB,
-    DateTimeOffset Timestamp);
+    DateTimeOffset Timestamp,
+    int? CpuTemperatureCelsius = null,
+    int? GpuPercentage = null,
+    int? GpuMemoryPercentage = null,
+    int? GpuTemperatureCelsius = null);
 
 public interface ISystemMetricsSource
 {
     CpuTimeCounters? ReadCpuTimes();
 
     PhysicalMemoryCounters? ReadPhysicalMemory();
+}
+
+public interface ISlowMetricsSource
+{
+    Task<GpuMetricsReading?> ReadGpuMetricsAsync(CancellationToken cancellationToken);
+
+    Task<int?> ReadCpuTemperatureCelsiusAsync(CancellationToken cancellationToken);
 }
 
 internal sealed class PerformanceMetricsSampler : IDisposable
