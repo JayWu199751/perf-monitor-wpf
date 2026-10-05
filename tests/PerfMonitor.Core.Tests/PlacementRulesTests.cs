@@ -177,4 +177,34 @@ public sealed class PlacementRulesTests
         Assert.Equal(0, restored.X);
         Assert.Equal(400, restored.Y);
     }
+
+    [Fact(DisplayName = "行内标志置位时按当前任务栏几何恢复行内落位")]
+    public void In_row_placements_restore_into_the_current_taskbar_row()
+    {
+        var stored = new WidgetPlacement { X = 100, Y = 1050, Docked = DockedEdges.Bottom, InTaskbarRow = true };
+        var frameSize = new PlacementRect(0, 0, 200, 40);
+
+        var (restored, docked) = PlacementRules.RestorePlacement(
+            stored, frameSize, [SingleDisplay], PlacementInsets.Zero, centerInRow: false);
+
+        Assert.Equal(new PlacementRect(100, 1040, 200, 40), restored);
+        Assert.Equal(DockedEdges.Bottom, docked);
+    }
+
+    [Fact(DisplayName = "行内恢复在当前无任务栏行时回落普通贴边恢复")]
+    public void In_row_restoration_falls_back_to_plain_snapping_without_a_row()
+    {
+        var sideTaskbarDisplay = new DisplayInformation(
+            new PlacementRect(0, 0, 1920, 1080),
+            new PlacementRect(16, 0, 1904, 1080),
+            DpiScale: 1.0);
+        var stored = new WidgetPlacement { X = 100, Y = 1050, Docked = DockedEdges.Bottom, InTaskbarRow = true };
+        var frameSize = new PlacementRect(0, 0, 200, 40);
+
+        var (restored, docked) = PlacementRules.RestorePlacement(
+            stored, frameSize, [sideTaskbarDisplay], PlacementInsets.Zero, centerInRow: false);
+
+        Assert.Equal(1039, restored.Y);
+        Assert.Equal(DockedEdges.Bottom, docked);
+    }
 }

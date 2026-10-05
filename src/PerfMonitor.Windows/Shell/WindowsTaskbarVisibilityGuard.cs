@@ -12,8 +12,10 @@ namespace PerfMonitor.Windows.Shell;
 public sealed class WindowsTaskbarVisibilityGuard : ITaskbarVisibilityGuardPort, IDisposable
 {
     private const int GaRoot = 2;
-    private const uint HwndNotopmost = unchecked(0xFFFFFFFF) - 1; // -2
-    private const uint HwndTopmost = unchecked(0xFFFFFFFF) - 0;   // -1
+    // HWND_TOPMOST=-1、HWND_NOTOPMOST=-2：必须按 64 位有符号 -1/-2 传入。
+    // 不可用 uint(0xFFFFFFFF) 再转 nint——零扩展后变成无效句柄，SetWindowPos 会静默失败。
+    private const nint HwndNotopmost = -2;
+    private const nint HwndTopmost = -1;
     private const uint SwpNoSize = 0x0001;
     private const uint SwpNoMove = 0x0002;
     private const uint SwpNoActivate = 0x0010;
@@ -78,7 +80,7 @@ public sealed class WindowsTaskbarVisibilityGuard : ITaskbarVisibilityGuardPort,
 
             if (NativeMethods.SetWindowPos(
                     card,
-                    unchecked((nint)HwndTopmost),
+                    HwndTopmost,
                     0,
                     0,
                     0,
@@ -138,7 +140,7 @@ public sealed class WindowsTaskbarVisibilityGuard : ITaskbarVisibilityGuardPort,
             {
                 _ = NativeMethods.SetWindowPos(
                     card,
-                    unchecked((nint)HwndNotopmost),
+                    HwndNotopmost,
                     0,
                     0,
                     0,

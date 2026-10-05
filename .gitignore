@@ -6,3 +6,12 @@
 
 # 本地发布产物（不入库，见 docs/release.md）
 publish/
+
+# 工作区本地数据与记忆（WorkBuddy）
+.workbuddy/
+
+# 本地事项跟踪与调试产物（见 docs/agents/issue-tracker.md）
+.scratch/
+
+# 安装器编译产物
+installer/Output/

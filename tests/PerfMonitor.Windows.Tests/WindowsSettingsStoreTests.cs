@@ -19,7 +19,8 @@ public sealed class WindowsSettingsStoreTests
             CenterInTaskbarRow = true,
             Opacity = 0.85,
             FontSize = 17,
-            Theme = BarTheme.Dark
+            Theme = BarTheme.Dark,
+            Widget = new WidgetPlacement { X = 100, Y = 1040, Docked = DockedEdges.Bottom, InTaskbarRow = true }
         };
 
         store.Save(expected);
@@ -28,6 +29,19 @@ public sealed class WindowsSettingsStoreTests
 
         Assert.Equal(expected, restored);
         Assert.Equal(PerformanceSettings.CurrentSchemaVersion, document.RootElement.GetProperty("schemaVersion").GetInt32());
+    }
+
+    [Fact(DisplayName = "缺少行内标志的旧设置文件按不在行内加载")]
+    public void Legacy_settings_without_the_in_row_flag_load_as_not_in_row()
+    {
+        using var directory = new TemporaryDirectory();
+        var path = Path.Combine(directory.Path, "settings.json");
+        File.WriteAllText(path, "{\"schemaVersion\":1,\"widget\":{\"x\":100,\"y\":1050,\"docked\":\"bottom\"}}");
+
+        var loaded = new WindowsSettingsStore(path).Load();
+
+        Assert.False(loaded.Widget.InTaskbarRow);
+        Assert.Equal(DockedEdges.Bottom, loaded.Widget.Docked);
     }
 
     [Theory(DisplayName = "损坏或越界设置会备份原文件并恢复默认")]

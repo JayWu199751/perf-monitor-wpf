@@ -38,6 +38,7 @@ internal sealed class WpfStartupShellHost : IStartupShellHost, IDisposable
     private Action? _trayRightClick;
     private readonly ContextMenuPresentationGuard _contextMenuGuard = new();
     private Action? _performanceBarMoveRequestHandler;
+    private Action? _performanceBarFrameSizeChangedHandler;
     private bool _shutdownRequested;
     private volatile bool _disposed;
 
@@ -61,6 +62,11 @@ internal sealed class WpfStartupShellHost : IStartupShellHost, IDisposable
     public void SetPerformanceBarMoveRequestHandler(Action handler)
     {
         _performanceBarMoveRequestHandler = handler;
+    }
+
+    public void SetPerformanceBarFrameSizeChangedHandler(Action handler)
+    {
+        _performanceBarFrameSizeChangedHandler = handler;
     }
 
     public void BeginPerformanceBarNativeMove()
@@ -356,6 +362,7 @@ internal sealed class WpfStartupShellHost : IStartupShellHost, IDisposable
             return;
         }
 
+        Diagnostics.AppLog.Write("宿主 Shutdown（托盘退出/菜单退出/控制器清理链）。");
         _shutdownRequested = true;
         _sharedContextMenu.IsOpen = false;
         DisposeTrayIcon();
@@ -401,6 +408,7 @@ internal sealed class WpfStartupShellHost : IStartupShellHost, IDisposable
             DataContext = _performanceBarViewModel
         };
         _performanceBar.ContextMenuRequested += (_, _) => PerformanceBarRightClickRequested?.Invoke(this, EventArgs.Empty);
+        _performanceBar.SizeChanged += (_, _) => _performanceBarFrameSizeChangedHandler?.Invoke();
         _performanceBar.Closed += (_, _) =>
         {
             if (!_shutdownRequested)

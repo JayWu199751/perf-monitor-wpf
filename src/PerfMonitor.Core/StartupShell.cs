@@ -90,6 +90,14 @@ public interface IStartupShellHost
 {
     void SetPerformanceBarMoveRequestHandler(Action handler);
 
+    /// <summary>
+    /// 注册性能条框架尺寸变化回调；窗口尺寸随内容渲染、字号调整等变化时宿主应调用回调。
+    /// 行内居中需要按实际宽度重新回中，缺省空实现表示宿主不支持尺寸通知。
+    /// </summary>
+    void SetPerformanceBarFrameSizeChangedHandler(Action handler)
+    {
+    }
+
     void BeginPerformanceBarNativeMove();
 
     ISystemMetricsSource? SystemMetricsSource { get; }
@@ -208,6 +216,7 @@ public sealed class StartupShellController : IDisposable
             SlowRefreshMilliseconds = slowRefreshMilliseconds ?? loadedSettings.SlowRefreshMilliseconds
         }).Validate();
         _host.SetPerformanceBarMoveRequestHandler(OnPerformanceBarNativeMoveRequested);
+        _host.SetPerformanceBarFrameSizeChangedHandler(OnPerformanceBarFrameSizeChanged);
         _lastPlacement = Settings.Widget;
         _displayEnvironmentSource = host.DisplayEnvironmentSource;
         if (_displayEnvironmentSource is not null)
@@ -275,6 +284,8 @@ public sealed class StartupShellController : IDisposable
         RestorePlacementIfPortChanged();
         _host.CreateTrayIcon(OnTrayLeftClick, OnTrayRightClick);
         State = new(true, true, true, false, false);
+        // 恢复期结算被 IsRunning 门控跳过，这里补结算以衔接任务栏行内守卫。
+        SettlePlacement();
         StartMetricSampling();
         StartFullscreenWatcherIfEnabled();
     }
@@ -321,6 +332,8 @@ public sealed class StartupShellController : IDisposable
         var wasVisible = State.IsPerformanceBarVisible;
         _host.SetPerformanceBarVisible(visible: true, activate: true);
         RestorePlacementIfPortChanged();
+        // 同显隐往返路径：重新结算行内归属并按需重启任务栏守卫。
+        SettlePlacement();
         State = State with { IsPerformanceBarVisible = true };
         if (!wasVisible)
         {
@@ -475,6 +488,12 @@ public sealed class StartupShellController : IDisposable
         }
     }
 
+    /// <summary>
+    /// 性能条框架尺寸变化（内容渲染、字号调整等）后重新结算：
+    /// 行内居中按实际宽度回中，其余情形结算幂等、不移动窗口。
+    /// </summary>
+    private void OnPerformanceBarFrameSizeChanged() => SettlePlacement();
+
     public void OnSettingsWindowClosed()
     {
         if (!State.IsRunning || !State.IsSettingsWindowVisible)
@@ -554,6 +573,9 @@ public sealed class StartupShellController : IDisposable
         if (visible)
         {
             RestorePlacementIfPortChanged();
+            // 重新结算行内归属：隐藏时守卫已停止，显示后必须按需重启，
+            // 否则下一次任务栏遮挡将无人修复（显隐往返后守卫失效）。
+            SettlePlacement();
             StartMetricSampling();
         }
         else
@@ -672,9 +694,16 @@ public sealed class StartupShellController : IDisposable
             stored,
             frame with { X = 0, Y = 0 },
             displays,
-            PlacementInsets.Zero);
+            PlacementInsets.Zero,
+            Settings.CenterInTaskbarRow);
         port.SetFramePosition(restored.X, restored.Y);
-        var placement = new WidgetPlacement { X = restored.X, Y = restored.Y, Docked = docked };
+        var placement = new WidgetPlacement
+        {
+            X = restored.X,
+            Y = restored.Y,
+            Docked = docked,
+            InTaskbarRow = stored.InTaskbarRow
+        };
         lock (_placementSync)
         {
             if (placement != _lastPlacement)
@@ -750,7 +779,13 @@ public sealed class StartupShellController : IDisposable
                 port.SetFramePosition(settled.X, settled.Y);
             }
 
-            var placement = new WidgetPlacement { X = settled.X, Y = settled.Y, Docked = docked };
+            var placement = new WidgetPlacement
+            {
+                X = settled.X,
+                Y = settled.Y,
+                Docked = docked,
+                InTaskbarRow = inRow
+            };
             _isInTaskbarRow = inRow;
             UpdateTaskbarGuard();
             lock (_placementSync)

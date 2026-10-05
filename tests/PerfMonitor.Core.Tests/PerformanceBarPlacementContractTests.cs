@@ -37,6 +37,125 @@ public sealed class PerformanceBarPlacementContractTests
         Assert.Equal((100d, 1d), host.PlacementPort.LastSetPosition);
     }
 
+    [Fact(DisplayName = "启动恢复任务栏行内位置时按当前任务栏几何落回行内")]
+    public async Task Startup_restores_an_in_row_placement_back_into_the_taskbar_row()
+    {
+        var stored = PerformanceSettings.Default with
+        {
+            Widget = new WidgetPlacement { X = 100, Y = 1050, Docked = DockedEdges.Bottom, InTaskbarRow = true }
+        };
+        var store = new RecordingPlacementStore(stored);
+        var displays = new FakeDisplaySource([BottomTaskbarDisplay]);
+        var host = new RecordingPlacementHost(store, displays);
+        using var shell = new StartupShellController(
+            host,
+            placementDebounceMilliseconds: 80,
+            taskbarGuardFastMilliseconds: 10,
+            taskbarGuardSlowMilliseconds: 30);
+
+        shell.Start();
+
+        Assert.Equal((100d, 1040d), host.PlacementPort.LastSetPosition);
+        await WaitAsync(() => store.LastSaved is not null);
+        Assert.Equal(
+            new WidgetPlacement { X = 100, Y = 1040, Docked = DockedEdges.Bottom, InTaskbarRow = true },
+            store.LastSaved!.Widget);
+        await WaitAsync(() => host.TaskbarGuard.EnsureAboveTaskbarCount >= 1);
+    }
+
+    [Fact(DisplayName = "启动恢复行内位置且开启行内居中时回到整行水平中心")]
+    public async Task Startup_restores_a_centered_in_row_placement_to_the_row_center()
+    {
+        var stored = PerformanceSettings.Default with
+        {
+            CenterInTaskbarRow = true,
+            Widget = new WidgetPlacement { X = 860, Y = 1050, Docked = DockedEdges.Bottom, InTaskbarRow = true }
+        };
+        var store = new RecordingPlacementStore(stored);
+        var displays = new FakeDisplaySource([BottomTaskbarDisplay]);
+        var host = new RecordingPlacementHost(store, displays);
+        using var shell = new StartupShellController(host, placementDebounceMilliseconds: 80);
+
+        shell.Start();
+
+        Assert.Equal((860d, 1040d), host.PlacementPort.LastSetPosition);
+    }
+
+    [Fact(DisplayName = "存储行内但当前无任务栏行时启动回落普通贴边恢复")]
+    public async Task Startup_falls_back_to_plain_snapping_when_the_stored_row_is_gone()
+    {
+        var sideTaskbarDisplay = new DisplayInformation(
+            new PlacementRect(0, 0, 1920, 1080),
+            new PlacementRect(16, 0, 1904, 1080),
+            DpiScale: 1.0);
+        var stored = PerformanceSettings.Default with
+        {
+            Widget = new WidgetPlacement { X = 100, Y = 1050, Docked = DockedEdges.Bottom, InTaskbarRow = true }
+        };
+        var store = new RecordingPlacementStore(stored);
+        var displays = new FakeDisplaySource([sideTaskbarDisplay]);
+        var host = new RecordingPlacementHost(store, displays);
+        using var shell = new StartupShellController(host, placementDebounceMilliseconds: 80);
+
+        shell.Start();
+
+        Assert.Equal((100d, 1039d), host.PlacementPort.LastSetPosition);
+    }
+
+    [Fact(DisplayName = "内容宽度变化后行内居中按实际宽度重新回中并持久化")]
+    public async Task Frame_size_changes_re_center_the_row_centered_card()
+    {
+        var stored = PerformanceSettings.Default with
+        {
+            CenterInTaskbarRow = true,
+            Widget = new WidgetPlacement { X = 892, Y = 7, Docked = DockedEdges.Top, InTaskbarRow = true }
+        };
+        var store = new RecordingPlacementStore(stored);
+        var topTaskbarDisplay = new DisplayInformation(
+            new PlacementRect(0, 0, 1920, 1080),
+            new PlacementRect(0, 48, 1920, 1032),
+            DpiScale: 1.0);
+        var displays = new FakeDisplaySource([topTaskbarDisplay]);
+        var host = new RecordingPlacementHost(store, displays);
+        using var shell = new StartupShellController(host, placementDebounceMilliseconds: 80);
+
+        shell.Start();
+        Assert.Equal((860d, 4d), host.PlacementPort.LastSetPosition);
+
+        // 模拟内容渲染后窗口从初始宽度 200 长到 300。
+        host.PlacementPort.Frame = host.PlacementPort.Frame with { Width = 300 };
+        host.RaisePerformanceBarFrameSizeChanged();
+
+        Assert.Equal((810d, 4d), host.PlacementPort.LastSetPosition);
+        await WaitAsync(() => store.LastSaved is not null);
+        Assert.Equal(
+            new WidgetPlacement { X = 810, Y = 4, Docked = DockedEdges.Top, InTaskbarRow = true },
+            store.LastSaved!.Widget);
+    }
+
+    [Fact(DisplayName = "非居中的行内卡片宽度变化后保持水平位置")]
+    public void Frame_size_changes_keep_the_x_of_a_non_centered_row_card()
+    {
+        var stored = PerformanceSettings.Default with
+        {
+            Widget = new WidgetPlacement { X = 300, Y = 7, Docked = DockedEdges.Top, InTaskbarRow = true }
+        };
+        var store = new RecordingPlacementStore(stored);
+        var topTaskbarDisplay = new DisplayInformation(
+            new PlacementRect(0, 0, 1920, 1080),
+            new PlacementRect(0, 48, 1920, 1032),
+            DpiScale: 1.0);
+        var displays = new FakeDisplaySource([topTaskbarDisplay]);
+        var host = new RecordingPlacementHost(store, displays);
+        using var shell = new StartupShellController(host, placementDebounceMilliseconds: 80);
+
+        shell.Start();
+        host.PlacementPort.Frame = host.PlacementPort.Frame with { Width = 300 };
+        host.RaisePerformanceBarFrameSizeChanged();
+
+        Assert.Equal((300d, 4d), host.PlacementPort.LastSetPosition);
+    }
+
     [Fact(DisplayName = "创建期临时位置不会覆盖待恢复位置")]
     public async Task Creation_time_temporary_position_never_overrides_the_restored_position()
     {
@@ -466,6 +585,7 @@ public sealed class PerformanceBarPlacementContractTests
     private sealed class RecordingPlacementHost : IStartupShellHost
     {
         private Action? _moveRequestHandler;
+        private Action? _frameSizeChangedHandler;
         private Action? _trayLeftClick;
 
         public RecordingPlacementHost(ISettingsStore? settingsStore = null, IDisplayEnvironmentSource? displays = null)
@@ -501,6 +621,10 @@ public sealed class PerformanceBarPlacementContractTests
         public ISystemMetricsSource? SystemMetricsSource => null;
 
         public void SetPerformanceBarMoveRequestHandler(Action handler) => _moveRequestHandler = handler;
+
+        public void SetPerformanceBarFrameSizeChangedHandler(Action handler) => _frameSizeChangedHandler = handler;
+
+        public void RaisePerformanceBarFrameSizeChanged() => _frameSizeChangedHandler?.Invoke();
 
         public void BeginPerformanceBarNativeMove()
         {

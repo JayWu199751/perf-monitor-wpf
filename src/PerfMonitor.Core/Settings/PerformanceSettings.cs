@@ -37,6 +37,9 @@ public sealed record WidgetPlacement
     public double Y { get; init; } = 24;
 
     public DockedEdges Docked { get; init; }
+
+    /// <summary>持久化时性能条是否驻留任务栏行内；恢复时按当前任务栏几何重新落位。</summary>
+    public bool InTaskbarRow { get; init; }
 }
 
 public sealed record PerformanceSettings

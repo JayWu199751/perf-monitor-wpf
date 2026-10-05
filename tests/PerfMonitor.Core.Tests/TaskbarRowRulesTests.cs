@@ -203,4 +203,83 @@ public sealed class TaskbarRowRulesTests
         Assert.True(inRow);
         Assert.Equal(860, settled.X);
     }
+
+    [Fact(DisplayName = "行内恢复按当前行垂直居中并保留存储水平位置")]
+    public void Restoring_a_row_placement_centers_vertically_and_keeps_the_stored_x()
+    {
+        var stored = new WidgetPlacement { X = 100, Y = 1050, Docked = DockedEdges.Bottom, InTaskbarRow = true };
+
+        var restored = TaskbarRowRules.TryRestoreRowPlacement(
+            stored, new PlacementRect(0, 0, 200, 40), BottomTaskbarDisplay, centerInRow: false,
+            out var frame, out var docked);
+
+        Assert.True(restored);
+        Assert.Equal(new PlacementRect(100, 1040, 200, 40), frame);
+        Assert.Equal(DockedEdges.Bottom, docked);
+    }
+
+    [Fact(DisplayName = "行内恢复在行内居中开启时回到整行水平中心")]
+    public void Restoring_a_row_placement_with_centering_snaps_to_the_row_center()
+    {
+        var stored = new WidgetPlacement { X = 100, Y = 1050, Docked = DockedEdges.Bottom, InTaskbarRow = true };
+
+        var restored = TaskbarRowRules.TryRestoreRowPlacement(
+            stored, new PlacementRect(0, 0, 200, 40), BottomTaskbarDisplay, centerInRow: true,
+            out var frame, out var docked);
+
+        Assert.True(restored);
+        Assert.Equal(new PlacementRect(860, 1040, 200, 40), frame);
+        Assert.Equal(DockedEdges.Bottom, docked);
+    }
+
+    [Fact(DisplayName = "存储水平位置超出当前行范围时夹入行内")]
+    public void Stored_x_outside_the_current_row_is_clamped_into_it()
+    {
+        var stored = new WidgetPlacement { X = 1800, Y = 1050, Docked = DockedEdges.Bottom, InTaskbarRow = true };
+
+        var restored = TaskbarRowRules.TryRestoreRowPlacement(
+            stored, new PlacementRect(0, 0, 200, 40), BottomTaskbarDisplay, centerInRow: false,
+            out var frame, out _);
+
+        Assert.True(restored);
+        Assert.Equal(1720, frame.X);
+    }
+
+    [Fact(DisplayName = "顶部任务栏按顶行恢复行内落位")]
+    public void Top_taskbar_restores_into_the_top_row()
+    {
+        var stored = new WidgetPlacement { X = 100, Y = 20, Docked = DockedEdges.Top, InTaskbarRow = true };
+
+        var restored = TaskbarRowRules.TryRestoreRowPlacement(
+            stored, new PlacementRect(0, 0, 200, 40), TopTaskbarDisplay, centerInRow: false,
+            out var frame, out var docked);
+
+        Assert.True(restored);
+        Assert.Equal(new PlacementRect(100, 4, 200, 40), frame);
+        Assert.Equal(DockedEdges.Top, docked);
+    }
+
+    [Fact(DisplayName = "当前任务栏无行时不恢复行内")]
+    public void No_current_row_fails_row_restoration()
+    {
+        var stored = new WidgetPlacement { X = 100, Y = 1050, Docked = DockedEdges.Bottom, InTaskbarRow = true };
+
+        var restored = TaskbarRowRules.TryRestoreRowPlacement(
+            stored, new PlacementRect(0, 0, 200, 40), LeftTaskbarDisplay, centerInRow: false,
+            out _, out _);
+
+        Assert.False(restored);
+    }
+
+    [Fact(DisplayName = "贴边掩码不含顶底边时不恢复行内")]
+    public void Stored_mask_without_a_vertical_edge_fails_row_restoration()
+    {
+        var stored = new WidgetPlacement { X = 100, Y = 300, Docked = DockedEdges.Left, InTaskbarRow = true };
+
+        var restored = TaskbarRowRules.TryRestoreRowPlacement(
+            stored, new PlacementRect(0, 0, 200, 40), BottomTaskbarDisplay, centerInRow: false,
+            out _, out _);
+
+        Assert.False(restored);
+    }
 }

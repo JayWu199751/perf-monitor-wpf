@@ -105,14 +105,16 @@ public static class PlacementRules
     }
 
     /// <summary>
-    /// 恢复待恢复位置：先按存储中心点选择显示器（消失时取最近），夹回可见工作区，
-    /// 再按贴边掩码重新落位。返回恢复后的框架与生效掩码。
+    /// 恢复待恢复位置：先按存储中心点选择显示器（消失时取最近），
+    /// 行内标志置位时优先按当前任务栏几何恢复行内落位（无行时回落），
+    /// 否则夹回可见工作区后按贴边掩码重新落位。返回恢复后的框架与生效掩码。
     /// </summary>
     public static (PlacementRect Frame, DockedEdges Docked) RestorePlacement(
         WidgetPlacement stored,
         PlacementRect frameSize,
         IReadOnlyList<DisplayInformation> displays,
-        PlacementInsets insets)
+        PlacementInsets insets,
+        bool centerInRow = false)
     {
         var center = frameSize with { X = stored.X, Y = stored.Y };
         var resolved = FindDisplayByCenter(displays, center) ?? FindNearestDisplay(displays, center);
@@ -122,6 +124,12 @@ public static class PlacementRules
         }
 
         var target = resolved.Value;
+
+        if (stored.InTaskbarRow &&
+            TaskbarRowRules.TryRestoreRowPlacement(stored, frameSize, target, centerInRow, out var rowFrame, out var rowDocked))
+        {
+            return (rowFrame, rowDocked);
+        }
 
         var frame = ClampIntoWorkArea(frameSize with { X = stored.X, Y = stored.Y }, target);
         var border = SnapSafeBorderDips * target.DpiScale;

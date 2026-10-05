@@ -92,4 +92,41 @@ public static class TaskbarRowRules
 
         return (frame, settledDocked, false);
     }
+
+    /// <summary>
+    /// 行内恢复：按当前任务栏几何重新落位，前提是存储贴边掩码含对应顶/底边。
+    /// 行内居中开启时回到整行水平中心，否则保留存储水平位置并夹入行范围；
+    /// 垂直方向始终居中到行。无行或贴边掩码不含顶/底边时返回 false，
+    /// 由调用方回落普通贴边恢复。
+    /// </summary>
+    public static bool TryRestoreRowPlacement(
+        WidgetPlacement stored,
+        PlacementRect frameSize,
+        DisplayInformation display,
+        bool centerInRow,
+        out PlacementRect frame,
+        out DockedEdges docked)
+    {
+        foreach (var row in DeriveRows(display))
+        {
+            var rect = row.Rect;
+            var rowEdge = row.Kind == TaskbarRowKind.Top ? DockedEdges.Top : DockedEdges.Bottom;
+            if ((stored.Docked & rowEdge) == 0)
+            {
+                continue;
+            }
+
+            var x = centerInRow
+                ? rect.CenterX - frameSize.Width / 2
+                : Math.Max(rect.X, Math.Min(stored.X, Math.Max(rect.X, rect.Right - frameSize.Width)));
+            var y = rect.Y + (rect.Height - frameSize.Height) / 2;
+            frame = frameSize with { X = x, Y = y };
+            docked = stored.Docked;
+            return true;
+        }
+
+        frame = frameSize;
+        docked = stored.Docked;
+        return false;
+    }
 }
