@@ -84,7 +84,7 @@ public sealed class WindowsTaskbarVisibilityGuard : ITaskbarVisibilityGuardPort,
 
             if (NativeMethods.SetWindowPos(
                     card,
-                    (nint)HwndTopmost,
+                    unchecked((nint)HwndTopmost),
                     0,
                     0,
                     0,
@@ -144,7 +144,7 @@ public sealed class WindowsTaskbarVisibilityGuard : ITaskbarVisibilityGuardPort,
             {
                 _ = NativeMethods.SetWindowPos(
                     card,
-                    (nint)HwndNotopmost,
+                    unchecked((nint)HwndNotopmost),
                     0,
                     0,
                     0,
