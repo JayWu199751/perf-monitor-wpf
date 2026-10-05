@@ -1,6 +1,6 @@
 using PerfMonitor.App.Shell;
-using PerfMonitor.App.Platform;
 using PerfMonitor.Core.Shell;
+using PerfMonitor.Windows.Elevation;
 using WpfApplication = System.Windows.Application;
 using System.Windows;
 using System.Diagnostics;

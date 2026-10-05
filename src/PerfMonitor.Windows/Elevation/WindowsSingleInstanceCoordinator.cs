@@ -5,9 +5,9 @@ using System.Runtime.InteropServices;
 using System.Text;
 using Microsoft.Win32.SafeHandles;
 
-namespace PerfMonitor.App.Platform;
+namespace PerfMonitor.Windows.Elevation;
 
-internal sealed class WindowsSingleInstanceCoordinator : IDisposable
+public sealed class WindowsSingleInstanceCoordinator : IDisposable
 {
     private const int ErrorAlreadyExists = 183;
     private const int PipeCommandTimeoutMilliseconds = 5_000;

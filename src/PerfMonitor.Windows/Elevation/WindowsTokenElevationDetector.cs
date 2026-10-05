@@ -2,9 +2,9 @@ using System.ComponentModel;
 using System.Runtime.InteropServices;
 using Microsoft.Win32.SafeHandles;
 
-namespace PerfMonitor.App.Platform;
+namespace PerfMonitor.Windows.Elevation;
 
-internal static class WindowsTokenElevationDetector
+public static class WindowsTokenElevationDetector
 {
     private const uint TokenQuery = 0x0008;
     private const int TokenElevationInformationClass = 20;

@@ -3,9 +3,9 @@ using System.Diagnostics;
 using System.IO;
 using System.Security;
 
-namespace PerfMonitor.App.Platform;
+namespace PerfMonitor.Windows.Elevation;
 
-internal static class WindowsRunAsLauncher
+public static class WindowsRunAsLauncher
 {
     public static bool TryLaunch(string elevationHandoffToken)
     {
