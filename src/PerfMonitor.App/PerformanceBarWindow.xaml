@@ -1,0 +1,32 @@
+<Window x:Class="PerfMonitor.App.PerformanceBarWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="性能小窗"
+        WindowStyle="None"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        ShowActivated="False"
+        Topmost="True"
+        AllowsTransparency="True"
+        Background="Transparent"
+        SizeToContent="WidthAndHeight"
+        WindowStartupLocation="Manual"
+        Left="24"
+        Top="24"
+        PreviewMouseRightButtonUp="OnPreviewMouseRightButtonUp">
+    <Border Padding="14,8"
+            Background="#E51F2228"
+            BorderBrush="#405560"
+            BorderThickness="1"
+            CornerRadius="9">
+        <TextBlock FontFamily="Segoe UI, Microsoft YaHei UI"
+                   FontSize="14"
+                   Foreground="#FFF4F6F8"
+                   TextOptions.TextFormattingMode="Display">
+            <Run Text="CPU " /><Run Text="--%" FontWeight="SemiBold" />
+            <Run Text="  ·  内存 " /><Run Text="--%" FontWeight="SemiBold" />
+            <Run Text="  ·  GPU " /><Run Text="--%" FontWeight="SemiBold" />
+            <Run Text="  ·  网络 " /><Run Text="--" FontWeight="SemiBold" />
+        </TextBlock>
+    </Border>
+</Window>
