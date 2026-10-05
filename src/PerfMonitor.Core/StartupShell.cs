@@ -25,6 +25,10 @@ public sealed record StartupShellState(
 
 public interface IStartupShellHost
 {
+    void SetPerformanceBarMoveRequestHandler(Action handler);
+
+    void BeginPerformanceBarNativeMove();
+
     ISystemMetricsSource? SystemMetricsSource { get; }
 
     void ShowPerformanceBar(bool activate);
@@ -66,6 +70,7 @@ public sealed class StartupShellController
         int fastRefreshMilliseconds = PerformanceMetricsSampler.DefaultFastRefreshMilliseconds)
     {
         _host = host;
+        _host.SetPerformanceBarMoveRequestHandler(OnPerformanceBarNativeMoveRequested);
         if (host.SystemMetricsSource is { } source)
         {
             _metricsSampler = new PerformanceMetricsSampler(source, PublishMetrics, fastRefreshMilliseconds);
@@ -115,6 +120,16 @@ public sealed class StartupShellController
     public void OnPerformanceBarRightClick()
     {
         ShowContextMenu(ShellMenuOrigin.PerformanceBar);
+    }
+
+    public void OnPerformanceBarNativeMoveRequested()
+    {
+        if (!State.IsRunning)
+        {
+            return;
+        }
+
+        _host.BeginPerformanceBarNativeMove();
     }
 
     public void OnSettingsWindowClosed()

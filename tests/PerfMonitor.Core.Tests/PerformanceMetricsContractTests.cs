@@ -159,6 +159,14 @@ public sealed class PerformanceMetricsContractTests
 
         public ISystemMetricsSource? SystemMetricsSource { get; } = source;
 
+        public void SetPerformanceBarMoveRequestHandler(Action handler)
+        {
+        }
+
+        public void BeginPerformanceBarNativeMove()
+        {
+        }
+
         public int PerformanceBarShowCount { get; private set; }
 
         public long CurrentGeneration => Interlocked.Read(ref _currentGeneration);
