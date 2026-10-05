@@ -86,6 +86,9 @@ public interface IStartupShellHost
     /// <summary>性能条窗口框架读写端口；窗口重建后宿主必须返回新实例。</summary>
     IPerformanceBarPlacementPort? PerformanceBarPlacement => null;
 
+    /// <summary>任务栏可见性守卫端口；缺省表示宿主不提供守卫能力。</summary>
+    ITaskbarVisibilityGuardPort? TaskbarVisibilityGuard => null;
+
     /// <summary>全屏前台窗口观察端口；缺省表示宿主不支持全屏自动隐藏。</summary>
     IFullscreenWatcher? FullscreenWatcher => null;
 
@@ -142,6 +145,13 @@ public sealed class StartupShellController : IDisposable
     private IPerformanceBarPlacementPort? _placementPort;
     private WidgetPlacement _lastPlacement = new();
     private bool _isSettlingPlacement;
+    private readonly ITaskbarVisibilityGuardPort? _taskbarGuard;
+    private readonly TimeSpan _taskbarGuardFastInterval;
+    private readonly TimeSpan _taskbarGuardSlowInterval;
+    private Timer? _taskbarGuardFastTimer;
+    private Timer? _taskbarGuardSlowTimer;
+    private bool _isTaskbarGuardActive;
+    private bool _isInTaskbarRow;
     private bool _isFullscreenActive;
     private bool _isAutoHiddenByFullscreen;
     private bool _isManuallyHidden;
@@ -152,12 +162,17 @@ public sealed class StartupShellController : IDisposable
         IStartupShellHost host,
         int? fastRefreshMilliseconds = null,
         int? slowRefreshMilliseconds = null,
-        int? placementDebounceMilliseconds = null)
+        int? placementDebounceMilliseconds = null,
+        int? taskbarGuardFastMilliseconds = null,
+        int? taskbarGuardSlowMilliseconds = null)
     {
         _host = host;
         _settingsStore = host.SettingsStore;
         _fullscreenWatcher = host.FullscreenWatcher;
         _autostartPort = host.AutostartPort;
+        _taskbarGuard = host.TaskbarVisibilityGuard;
+        _taskbarGuardFastInterval = TimeSpan.FromMilliseconds(taskbarGuardFastMilliseconds ?? 30);
+        _taskbarGuardSlowInterval = TimeSpan.FromMilliseconds(taskbarGuardSlowMilliseconds ?? 300);
         var loadedSettings = (_settingsStore?.Load() ?? PerformanceSettings.Default).Validate();
         Settings = (loadedSettings with
         {
@@ -307,6 +322,12 @@ public sealed class StartupShellController : IDisposable
                 break;
             case ShellMenuAction.ToggleCenterInTaskbarRow:
                 UpdateSettings(new SettingsPatch { CenterInTaskbarRow = !Settings.CenterInTaskbarRow });
+                if (Settings.CenterInTaskbarRow)
+                {
+                    // 开启立即结算一次，卡片弹回行中心；关闭保持原地不动。
+                    SettlePlacement();
+                }
+
                 break;
             case ShellMenuAction.ToggleTransparentDisplay:
                 UpdateSettings(new SettingsPatch { TransparentDisplay = !Settings.TransparentDisplay });
@@ -466,6 +487,85 @@ public sealed class StartupShellController : IDisposable
         else
         {
             StopMetricSampling();
+            StopTaskbarGuard();
+        }
+    }
+
+    private void UpdateTaskbarGuard()
+    {
+        if (_taskbarGuard is null || _disposed)
+        {
+            return;
+        }
+
+        var wanted = _isInTaskbarRow && State.IsRunning;
+        if (wanted == _isTaskbarGuardActive)
+        {
+            return;
+        }
+
+        _isTaskbarGuardActive = wanted;
+        if (wanted)
+        {
+            _taskbarGuardFastTimer = new Timer(OnTaskbarGuardFastTick, null, TimeSpan.Zero, _taskbarGuardFastInterval);
+            _taskbarGuardSlowTimer = new Timer(OnTaskbarGuardSlowTick, null, TimeSpan.Zero, _taskbarGuardSlowInterval);
+        }
+        else
+        {
+            StopTaskbarGuard();
+        }
+    }
+
+    /// <summary>停止守卫并通知 adapter 把卡片恢复到普通 z 序层；可重复调用。</summary>
+    private void StopTaskbarGuard()
+    {
+        _taskbarGuardFastTimer?.Dispose();
+        _taskbarGuardFastTimer = null;
+        _taskbarGuardSlowTimer?.Dispose();
+        _taskbarGuardSlowTimer = null;
+        if (_isTaskbarGuardActive)
+        {
+            _isTaskbarGuardActive = false;
+            try
+            {
+                _taskbarGuard?.OnGuardStopped();
+            }
+            catch (ObjectDisposedException)
+            {
+            }
+        }
+    }
+
+    private void OnTaskbarGuardFastTick(object? state)
+    {
+        // 隐藏、退出或原生拖动期间跳过遮挡检查；隐藏态由 StopTaskbarGuard 直接停表。
+        if (_disposed || !State.IsRunning || !State.IsPerformanceBarVisible || _isPerformanceBarNativeMoveActive)
+        {
+            return;
+        }
+
+        try
+        {
+            _taskbarGuard?.EnsureAboveTaskbar();
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+    }
+
+    private void OnTaskbarGuardSlowTick(object? state)
+    {
+        if (_disposed || !State.IsRunning || !State.IsPerformanceBarVisible || _isPerformanceBarNativeMoveActive)
+        {
+            return;
+        }
+
+        try
+        {
+            _taskbarGuard?.RefreshTaskbarHandles();
+        }
+        catch (ObjectDisposedException)
+        {
         }
     }
 
@@ -522,6 +622,9 @@ public sealed class StartupShellController : IDisposable
         {
             _placementPersistence?.Schedule();
         }
+
+        // 恢复位置已写入框架，重新结算一次以衔接任务栏行内落点与守卫。
+        SettlePlacement();
     }
 
     /// <summary>
@@ -564,17 +667,25 @@ public sealed class StartupShellController : IDisposable
                 frame = PlacementRules.ClampIntoWorkArea(frame, resolved);
             }
 
-            var (settled, docked) = PlacementRules.SettleSnap(
+            var (snapped, snappedDocked) = PlacementRules.SettleSnap(
                 frame,
                 resolved,
                 LastPlacementSnapshot().Docked,
                 PlacementInsets.Zero);
+            // 行内落点：中心在顶/底任务栏行内时垂直居中到行，行外回落普通贴边结果。
+            var (settled, docked, inRow) = TaskbarRowRules.SettleRowPlacement(
+                snapped,
+                resolved,
+                snappedDocked,
+                Settings.CenterInTaskbarRow);
             if (settled.X != frame.X || settled.Y != frame.Y)
             {
                 port.SetFramePosition(settled.X, settled.Y);
             }
 
             var placement = new WidgetPlacement { X = settled.X, Y = settled.Y, Docked = docked };
+            _isInTaskbarRow = inRow;
+            UpdateTaskbarGuard();
             lock (_placementSync)
             {
                 if (placement == _lastPlacement)
@@ -792,6 +903,7 @@ public sealed class StartupShellController : IDisposable
 
         _disposed = true;
         StopMetricSampling();
+        StopTaskbarGuard();
         _placementPersistence?.Flush();
         _placementPersistence?.Dispose();
         if (_displayEnvironmentSource is not null)

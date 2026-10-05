@@ -10,6 +10,7 @@ using PerfMonitor.Windows.Fullscreen;
 using PerfMonitor.Windows.Metrics;
 using PerfMonitor.Windows.ScheduledTasks;
 using PerfMonitor.Windows.Settings;
+using PerfMonitor.Windows.Shell;
 using WpfApplication = System.Windows.Application;
 using WpfContextMenu = System.Windows.Controls.ContextMenu;
 using WpfMenuItem = System.Windows.Controls.MenuItem;
@@ -67,7 +68,58 @@ internal sealed class WpfStartupShellHost : IStartupShellHost, IDisposable
 
     public IPerformanceBarPlacementPort? PerformanceBarPlacement => _performanceBar;
 
+    public ITaskbarVisibilityGuardPort? TaskbarVisibilityGuard => _taskbarGuard ??= CreateTaskbarGuard();
+
     public IFullscreenWatcher? FullscreenWatcher => _fullscreenWatcher;
+
+    private DispatchedTaskbarGuard? _taskbarGuard;
+
+    private DispatchedTaskbarGuard CreateTaskbarGuard()
+    {
+        var inner = new WindowsTaskbarVisibilityGuard(() =>
+            _performanceBar is { IsLoaded: true } bar && !_shutdownRequested ? bar.RootWindowHandle : nint.Zero);
+        return new DispatchedTaskbarGuard(inner, _application.Dispatcher);
+    }
+
+    /// <summary>
+    /// 把守卫端口调用编组到 UI 线程执行（SetWindowPos 作用于 UI 线程所属窗口）；
+    /// pending 标志防止 UI 繁忙时回调积压。
+    /// </summary>
+    private sealed class DispatchedTaskbarGuard : ITaskbarVisibilityGuardPort
+    {
+        private readonly WindowsTaskbarVisibilityGuard _inner;
+        private readonly Dispatcher _dispatcher;
+        private volatile bool _fastPending;
+        private volatile bool _slowPending;
+        private volatile bool _stopPending;
+
+        public DispatchedTaskbarGuard(WindowsTaskbarVisibilityGuard inner, Dispatcher dispatcher)
+        {
+            _inner = inner;
+            _dispatcher = dispatcher;
+        }
+
+        public void EnsureAboveTaskbar() => BeginInvoke(() => _fastPending, value => _fastPending = value, _inner.EnsureAboveTaskbar);
+
+        public void RefreshTaskbarHandles() => BeginInvoke(() => _slowPending, value => _slowPending = value, _inner.RefreshTaskbarHandles);
+
+        public void OnGuardStopped() => BeginInvoke(() => _stopPending, value => _stopPending = value, _inner.OnGuardStopped);
+
+        private void BeginInvoke(Func<bool> isPending, Action<bool> setPending, Action action)
+        {
+            if (isPending() || _dispatcher.HasShutdownStarted || _dispatcher.HasShutdownFinished)
+            {
+                return;
+            }
+
+            setPending(true);
+            _ = _dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
+            {
+                setPending(false);
+                action();
+            }));
+        }
+    }
 
     public ISettingsStore? SettingsStore => _settingsStore;
 
