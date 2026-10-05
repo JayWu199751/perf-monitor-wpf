@@ -216,6 +216,8 @@ public sealed class PerformanceMetricsContractTests
             _cpuReadings.Count > 0 ? _cpuReadings.Dequeue() : null;
 
         public PhysicalMemoryCounters? ReadPhysicalMemory() => memoryReading;
+
+        public NetworkCountersSnapshot? ReadNetworkCounters() => null;
     }
 
     private sealed class BlockingSystemMetricsSource : ISystemMetricsSource
@@ -256,6 +258,8 @@ public sealed class PerformanceMetricsContractTests
 
         public PhysicalMemoryCounters? ReadPhysicalMemory() =>
             new(TotalPhysicalBytes: 4UL * 1024 * 1024 * 1024, AvailablePhysicalBytes: 2UL * 1024 * 1024 * 1024);
+
+        public NetworkCountersSnapshot? ReadNetworkCounters() => null;
 
         public void ReleaseFirstCpuRead() => _releaseFirstCpuRead.Set();
 

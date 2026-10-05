@@ -26,7 +26,12 @@
             <Run Text="CPU " /><Run Text="{Binding CpuPercentageText}" FontWeight="SemiBold" />
             <Run Text="  ·  内存 " /><Run Text="{Binding MemoryPercentageText}" FontWeight="SemiBold" />
             <Run Text="  ·  GPU " /><Run Text="--%" FontWeight="SemiBold" />
-            <Run Text="  ·  网络 " /><Run Text="--" FontWeight="SemiBold" />
+            <Run Text="  ·  网络 " />
+            <Run Text="↓ " Foreground="#FF73B7FF" />
+            <Run Text="{Binding NetworkDownloadSpeedText}" FontWeight="SemiBold" />
+            <Run Text=" MB/s ↑ " Foreground="#FF73B7FF" />
+            <Run Text="{Binding NetworkUploadSpeedText}" FontWeight="SemiBold" />
+            <Run Text=" MB/s" />
         </TextBlock>
     </Border>
 </Window>
