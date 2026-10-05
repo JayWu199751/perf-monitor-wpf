@@ -48,6 +48,16 @@ public enum StartupAccessDecision
     RejectElevationHandoff
 }
 
+/// <summary>
+/// 全屏前台窗口观察能力端口：平台适配层注入，控制器只在启动/停止生命周期上消费其边沿通知。
+/// </summary>
+public interface IFullscreenWatcher : IDisposable
+{
+    void Start(Action<bool> onFullscreenChanged);
+
+    void Stop();
+}
+
 public enum AutostartRequestOutcome
 {
     Enabled,
@@ -78,6 +88,9 @@ public interface IStartupShellHost
 
     /// <summary>任务栏可见性守卫端口；缺省表示宿主不提供守卫能力。</summary>
     ITaskbarVisibilityGuardPort? TaskbarVisibilityGuard => null;
+
+    /// <summary>全屏前台窗口观察端口；缺省表示宿主不支持全屏自动隐藏。</summary>
+    IFullscreenWatcher? FullscreenWatcher => null;
 
     void ShowPerformanceBar(bool activate);
 
@@ -123,6 +136,7 @@ public sealed class StartupShellController : IDisposable
     private readonly PerformanceSlowMetricsSampler? _slowMetricsSampler;
     private readonly IDisplayEnvironmentSource? _displayEnvironmentSource;
     private readonly PlacementPersistence? _placementPersistence;
+    private readonly IFullscreenWatcher? _fullscreenWatcher;
     private readonly object _metricsSnapshotSync = new();
     private readonly object _placementSync = new();
     private PerformanceMetricsSnapshot? _latestMetricsSnapshot;
@@ -138,6 +152,10 @@ public sealed class StartupShellController : IDisposable
     private Timer? _taskbarGuardSlowTimer;
     private bool _isTaskbarGuardActive;
     private bool _isInTaskbarRow;
+    private bool _isFullscreenActive;
+    private bool _isAutoHiddenByFullscreen;
+    private bool _isManuallyHidden;
+    private bool _isFullscreenWatcherRunning;
     private bool _disposed;
 
     public StartupShellController(
@@ -150,6 +168,7 @@ public sealed class StartupShellController : IDisposable
     {
         _host = host;
         _settingsStore = host.SettingsStore;
+        _fullscreenWatcher = host.FullscreenWatcher;
         _autostartPort = host.AutostartPort;
         _taskbarGuard = host.TaskbarVisibilityGuard;
         _taskbarGuardFastInterval = TimeSpan.FromMilliseconds(taskbarGuardFastMilliseconds ?? 30);
@@ -229,6 +248,35 @@ public sealed class StartupShellController : IDisposable
         _host.CreateTrayIcon(OnTrayLeftClick, OnTrayRightClick);
         State = new(true, true, true, false, false);
         StartMetricSampling();
+        StartFullscreenWatcherIfEnabled();
+    }
+
+    public void OnFullscreenChanged(bool isFullscreen)
+    {
+        if (!State.IsRunning || isFullscreen == _isFullscreenActive)
+        {
+            return;
+        }
+
+        _isFullscreenActive = isFullscreen;
+        if (isFullscreen)
+        {
+            if (Settings.AutoHideOnFullscreen &&
+                !_isManuallyHidden &&
+                State.IsPerformanceBarVisible)
+            {
+                _isAutoHiddenByFullscreen = true;
+                SetPerformanceBarVisibilityCore(visible: false, activate: false);
+            }
+
+            return;
+        }
+
+        if (_isAutoHiddenByFullscreen)
+        {
+            _isAutoHiddenByFullscreen = false;
+            SetPerformanceBarVisibilityCore(visible: true, activate: false);
+        }
     }
 
     public void OnRepeatedLaunchRequested()
@@ -237,6 +285,10 @@ public sealed class StartupShellController : IDisposable
         {
             return;
         }
+
+        // 重复启动唤起是明确的手动显示入口，清两种隐藏标记并遵守同全屏周期的抑制。
+        _isManuallyHidden = false;
+        _isAutoHiddenByFullscreen = false;
 
         var wasVisible = State.IsPerformanceBarVisible;
         _host.SetPerformanceBarVisible(visible: true, activate: true);
@@ -283,6 +335,9 @@ public sealed class StartupShellController : IDisposable
             case ShellMenuAction.Exit:
                 StopMetricSampling();
                 _placementPersistence?.Flush();
+                StopFullscreenWatcher();
+                _isAutoHiddenByFullscreen = false;
+                _isManuallyHidden = false;
                 State = new(false, false, false, false, false);
                 _host.Shutdown();
                 break;
@@ -323,11 +378,30 @@ public sealed class StartupShellController : IDisposable
             _slowMetricsSampler?.SetRefreshMilliseconds(next.SlowRefreshMilliseconds);
         }
 
+        var autoHideOnFullscreenChanged = Settings.AutoHideOnFullscreen != next.AutoHideOnFullscreen;
         Settings = next;
         _host.ApplySettings(next);
         if (samplingIntervalChanged && CanSampleMetrics)
         {
             StartMetricSampling();
+        }
+
+        if (autoHideOnFullscreenChanged)
+        {
+            if (next.AutoHideOnFullscreen)
+            {
+                StartFullscreenWatcherIfEnabled();
+            }
+            else
+            {
+                StopFullscreenWatcher();
+                // 关闭自动隐藏是显式修正：仅恢复因自动原因隐藏的状态，手动隐藏保持不变。
+                if (_isAutoHiddenByFullscreen)
+                {
+                    _isAutoHiddenByFullscreen = false;
+                    SetPerformanceBarVisibilityCore(visible: true, activate: false);
+                }
+            }
         }
 
         return next;
@@ -384,6 +458,24 @@ public sealed class StartupShellController : IDisposable
     }
 
     private void SetPerformanceBarVisibility(bool visible, bool activate)
+    {
+        if (visible)
+        {
+            // 手动显示清两种隐藏标记；同一全屏周期内手动显示后保持显示。
+            _isManuallyHidden = false;
+            _isAutoHiddenByFullscreen = false;
+        }
+        else
+        {
+            // 手动隐藏优先于自动隐藏；退出全屏不得撤销用户的手动选择。
+            _isManuallyHidden = true;
+            _isAutoHiddenByFullscreen = false;
+        }
+
+        SetPerformanceBarVisibilityCore(visible, activate);
+    }
+
+    private void SetPerformanceBarVisibilityCore(bool visible, bool activate)
     {
         _host.SetPerformanceBarVisible(visible, activate: activate);
         State = State with { IsPerformanceBarVisible = visible };
@@ -687,6 +779,30 @@ public sealed class StartupShellController : IDisposable
     private bool CanSampleMetrics =>
         State.IsRunning && State.IsPerformanceBarVisible && !_isPerformanceBarNativeMoveActive;
 
+    private void StartFullscreenWatcherIfEnabled()
+    {
+        if (!State.IsRunning || !Settings.AutoHideOnFullscreen ||
+            _fullscreenWatcher is null || _isFullscreenWatcherRunning)
+        {
+            return;
+        }
+
+        _fullscreenWatcher.Start(OnFullscreenChanged);
+        _isFullscreenWatcherRunning = true;
+    }
+
+    private void StopFullscreenWatcher()
+    {
+        if (!_isFullscreenWatcherRunning)
+        {
+            return;
+        }
+
+        _isFullscreenWatcherRunning = false;
+        _isFullscreenActive = false;
+        _fullscreenWatcher?.Stop();
+    }
+
     private void StopMetricSampling()
     {
         if (_metricsSampler is null)
@@ -795,6 +911,7 @@ public sealed class StartupShellController : IDisposable
             _displayEnvironmentSource.DisplaysChanged -= OnDisplaysChanged;
         }
 
+        StopFullscreenWatcher();
         _metricsSampler?.Dispose();
         _slowMetricsSampler?.Dispose();
     }
