@@ -5,6 +5,7 @@ using Forms = System.Windows.Forms;
 using PerfMonitor.Core.Shell;
 using PerfMonitor.Core.Metrics;
 using PerfMonitor.Core.Settings;
+using PerfMonitor.Windows.Displays;
 using PerfMonitor.Windows.Metrics;
 using PerfMonitor.Windows.ScheduledTasks;
 using PerfMonitor.Windows.Settings;
@@ -23,6 +24,7 @@ internal sealed class WpfStartupShellHost : IStartupShellHost, IDisposable
     private readonly PerformanceBarViewModel _performanceBarViewModel = new();
     private readonly WindowsSystemMetricsSource _systemMetricsSource = new();
     private readonly WindowsSlowMetricsSource _slowMetricsSource = new();
+    private readonly WindowsDisplayEnvironmentSource _displayEnvironmentSource = new();
     private readonly ISettingsStore _settingsStore;
     private PerformanceSettings _currentSettings = PerformanceSettings.Default;
     private Func<SettingsPatch, PerformanceSettings>? _updateSettings;
@@ -58,6 +60,10 @@ internal sealed class WpfStartupShellHost : IStartupShellHost, IDisposable
     public ISystemMetricsSource? SystemMetricsSource => _systemMetricsSource;
 
     public ISlowMetricsSource? SlowMetricsSource => _slowMetricsSource;
+
+    public IDisplayEnvironmentSource? DisplayEnvironmentSource => _displayEnvironmentSource;
+
+    public IPerformanceBarPlacementPort? PerformanceBarPlacement => _performanceBar;
 
     public ISettingsStore? SettingsStore => _settingsStore;
 
@@ -269,6 +275,7 @@ internal sealed class WpfStartupShellHost : IStartupShellHost, IDisposable
         _sharedContextMenu.Items.Clear();
         DisposeTrayIcon();
         _performanceBarViewModel.Dispose();
+        _displayEnvironmentSource.Dispose();
     }
 
     private void EnsurePerformanceBar()
