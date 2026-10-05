@@ -6,6 +6,7 @@ using PerfMonitor.Core.Shell;
 using PerfMonitor.Core.Metrics;
 using PerfMonitor.Core.Settings;
 using PerfMonitor.Windows.Metrics;
+using PerfMonitor.Windows.ScheduledTasks;
 using PerfMonitor.Windows.Settings;
 using WpfApplication = System.Windows.Application;
 using WpfContextMenu = System.Windows.Controls.ContextMenu;
@@ -59,6 +60,24 @@ internal sealed class WpfStartupShellHost : IStartupShellHost, IDisposable
     public ISlowMetricsSource? SlowMetricsSource => _slowMetricsSource;
 
     public ISettingsStore? SettingsStore => _settingsStore;
+
+    public IAutostartPort? AutostartPort
+    {
+        get
+        {
+#if DEBUG
+            // Debug 构建不创建或修改系统自启；设置窗中该开关禁用并注明原因。
+            return null;
+#else
+            _autostartPort ??= new WindowsScheduledTaskAutostart();
+            return _autostartPort;
+#endif
+        }
+    }
+
+#if !DEBUG
+    private WindowsScheduledTaskAutostart? _autostartPort;
+#endif
 
     public void ShowPerformanceBar(bool activate)
     {
