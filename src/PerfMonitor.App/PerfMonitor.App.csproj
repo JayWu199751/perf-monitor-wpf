@@ -11,6 +11,19 @@
     <ApplicationIcon>Resources\icon.ico</ApplicationIcon>
   </PropertyGroup>
 
+  <!-- 版本与程序集信息（发布说明见 docs/release.md）。 -->
+  <PropertyGroup>
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <Product>性能小窗</Product>
+    <AssemblyTitle>性能小窗（PerfMonitor WPF 版）</AssemblyTitle>
+    <Description>Windows 桌面性能悬浮条（CPU/内存/GPU/网络），WPF 重写版。</Description>
+    <Company>PerfMonitor-WPF</Company>
+    <Copyright>Copyright © 2026</Copyright>
+    <NeutralLanguage>zh-CN</NeutralLanguage>
+  </PropertyGroup>
+
   <!-- WPF 通过 app.manifest 声明进程 DPI；Windows Forms 仅用于 NotifyIcon。 -->
   <PropertyGroup>
     <NoWarn>$(NoWarn);WFO0003</NoWarn>
