@@ -132,27 +132,55 @@ public sealed class PerformanceMetricsContractTests
     {
         var slowSource = new SequenceSlowMetricsSource(
             new GpuMetricsReading(UtilizationPercentage: 41, MemoryUtilizationPercentage: 52, TemperatureCelsius: 63),
-            cpuTemperatureCelsius: 38);
+            cpuTemperatureCelsius: 38,
+            subsequentGpuReading: new GpuMetricsReading(UtilizationPercentage: 44, MemoryUtilizationPercentage: 55, TemperatureCelsius: 66));
         var host = new MetricsShellHost(
             new SequenceSystemMetricsSource(
-                [new CpuTimeCounters(KernelTime: 100, UserTime: 50, IdleTime: 80)],
-                new PhysicalMemoryCounters(TotalPhysicalBytes: 8UL * 1024 * 1024 * 1024, AvailablePhysicalBytes: 3UL * 1024 * 1024 * 1024)),
+                Enumerable.Repeat<CpuTimeCounters?>(
+                    new CpuTimeCounters(KernelTime: 100, UserTime: 50, IdleTime: 80),
+                    count: 10),
+                new PhysicalMemoryCounters(TotalPhysicalBytes: 8UL * 1024 * 1024 * 1024, AvailablePhysicalBytes: 3UL * 1024 * 1024 * 1024),
+                networkReadingFactory: sequence => new NetworkCountersSnapshot(
+                    TimeSpan.FromSeconds(sequence),
+                    [new NetworkInterfaceCounters(
+                        InterfaceLuid: 1,
+                        IsUp: true,
+                        IsLoopback: false,
+                        PhysicalMediumType: 14,
+                        InOctets: (ulong)sequence * 1024 * 1024,
+                        OutOctets: (ulong)sequence * 2 * 1024 * 1024)])),
             slowSource);
         var shell = new StartupShellController(host, slowRefreshMilliseconds: 3000);
 
         shell.Start();
-        var snapshot = await host.ReadSnapshotUntilAsync(value =>
+        var firstSlowSnapshot = await host.ReadSnapshotUntilAsync(value =>
             value.GpuPercentage is not null && value.CpuTemperatureCelsius is not null);
+        var fastSnapshot = await host.ReadSnapshotUntilAsync(value =>
+            value.GpuPercentage == 41 &&
+            value.CpuTemperatureCelsius == 38 &&
+            value.NetworkDownloadMegabytesPerSecond == 1d &&
+            value.NetworkUploadMegabytesPerSecond == 2d);
+        var nextSlowSnapshot = await host.ReadSnapshotUntilAsync(value => value.GpuPercentage == 44);
         shell.SelectMenuItem(ShellMenuAction.Exit);
 
-        Assert.Equal(41, snapshot.GpuPercentage);
-        Assert.Equal(52, snapshot.GpuMemoryPercentage);
-        Assert.Equal(63, snapshot.GpuTemperatureCelsius);
-        Assert.Equal(38, snapshot.CpuTemperatureCelsius);
-        Assert.Equal(0, snapshot.CpuPercentage);
-        Assert.Equal(63, snapshot.MemoryPercentage);
-        Assert.Equal(1, slowSource.GpuReadCount);
-        Assert.Equal(1, slowSource.TemperatureReadCount);
+        Assert.Equal(41, firstSlowSnapshot.GpuPercentage);
+        Assert.Equal(52, firstSlowSnapshot.GpuMemoryPercentage);
+        Assert.Equal(63, firstSlowSnapshot.GpuTemperatureCelsius);
+        Assert.Equal(38, firstSlowSnapshot.CpuTemperatureCelsius);
+        Assert.Equal(0, fastSnapshot.CpuPercentage);
+        Assert.Equal(63, fastSnapshot.MemoryPercentage);
+        Assert.Equal(41, fastSnapshot.GpuPercentage);
+        Assert.Equal(38, fastSnapshot.CpuTemperatureCelsius);
+        Assert.Equal(1d, fastSnapshot.NetworkDownloadMegabytesPerSecond);
+        Assert.Equal(2d, fastSnapshot.NetworkUploadMegabytesPerSecond);
+        Assert.Equal(44, nextSlowSnapshot.GpuPercentage);
+        Assert.Equal(55, nextSlowSnapshot.GpuMemoryPercentage);
+        Assert.Equal(66, nextSlowSnapshot.GpuTemperatureCelsius);
+        Assert.Equal(38, nextSlowSnapshot.CpuTemperatureCelsius);
+        Assert.Equal(1d, nextSlowSnapshot.NetworkDownloadMegabytesPerSecond);
+        Assert.Equal(2d, nextSlowSnapshot.NetworkUploadMegabytesPerSecond);
+        Assert.True(slowSource.GpuReadCount >= 2);
+        Assert.True(slowSource.TemperatureReadCount >= 2);
     }
 
     [Fact(DisplayName = "GPU 读取失败时 ACPI 温度与 CPU、内存仍进入用户可见快照")]
@@ -387,19 +415,25 @@ public sealed class PerformanceMetricsContractTests
 
     private sealed class SequenceSystemMetricsSource(
         IEnumerable<CpuTimeCounters?> cpuReadings,
-        PhysicalMemoryCounters? memoryReading) : ISystemMetricsSource
+        PhysicalMemoryCounters? memoryReading,
+        Func<int, NetworkCountersSnapshot?>? networkReadingFactory = null) : ISystemMetricsSource
     {
         private readonly Queue<CpuTimeCounters?> _cpuReadings = new(cpuReadings);
+        private int _networkReadCount;
 
         public CpuTimeCounters? ReadCpuTimes() =>
             _cpuReadings.Count > 0 ? _cpuReadings.Dequeue() : null;
 
         public PhysicalMemoryCounters? ReadPhysicalMemory() => memoryReading;
+
+        public NetworkCountersSnapshot? ReadNetworkCounters() =>
+            networkReadingFactory?.Invoke(Interlocked.Increment(ref _networkReadCount));
     }
 
     private sealed class SequenceSlowMetricsSource(
         GpuMetricsReading? gpuReading,
-        int? cpuTemperatureCelsius) : ISlowMetricsSource
+        int? cpuTemperatureCelsius,
+        GpuMetricsReading? subsequentGpuReading = null) : ISlowMetricsSource
     {
         private int _gpuReadCount;
         private int _temperatureReadCount;
@@ -410,8 +444,10 @@ public sealed class PerformanceMetricsContractTests
 
         public Task<GpuMetricsReading?> ReadGpuMetricsAsync(CancellationToken cancellationToken)
         {
-            Interlocked.Increment(ref _gpuReadCount);
-            return Task.FromResult(gpuReading);
+            var readCount = Interlocked.Increment(ref _gpuReadCount);
+            return Task.FromResult(readCount > 1 && subsequentGpuReading is not null
+                ? subsequentGpuReading
+                : gpuReading);
         }
 
         public Task<int?> ReadCpuTemperatureCelsiusAsync(CancellationToken cancellationToken)
@@ -541,6 +577,8 @@ public sealed class PerformanceMetricsContractTests
 
         public PhysicalMemoryCounters? ReadPhysicalMemory() =>
             new(TotalPhysicalBytes: 4UL * 1024 * 1024 * 1024, AvailablePhysicalBytes: 2UL * 1024 * 1024 * 1024);
+
+        public NetworkCountersSnapshot? ReadNetworkCounters() => null;
 
         public void ReleaseFirstCpuRead() => _releaseFirstCpuRead.Set();
 

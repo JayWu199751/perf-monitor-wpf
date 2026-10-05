@@ -14,6 +14,8 @@ public sealed class PerformanceBarViewModel : INotifyPropertyChanged
     private string _gpuMemoryPercentageText = "--%";
     private string _gpuTemperatureText = "--°";
     private string _cpuTemperatureText = "--°";
+    private string _networkDownloadSpeedText = "--";
+    private string _networkUploadSpeedText = "--";
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -53,6 +55,18 @@ public sealed class PerformanceBarViewModel : INotifyPropertyChanged
         private set => SetField(ref _cpuTemperatureText, value);
     }
 
+    public string NetworkDownloadSpeedText
+    {
+        get => _networkDownloadSpeedText;
+        private set => SetField(ref _networkDownloadSpeedText, value);
+    }
+
+    public string NetworkUploadSpeedText
+    {
+        get => _networkUploadSpeedText;
+        private set => SetField(ref _networkUploadSpeedText, value);
+    }
+
     internal void SetMetricGeneration(long generation) => _metricGeneration = generation;
 
     internal void Apply(PerformanceMetricsSnapshot snapshot)
@@ -68,6 +82,8 @@ public sealed class PerformanceBarViewModel : INotifyPropertyChanged
         GpuMemoryPercentageText = FormatPercentage(snapshot.GpuMemoryPercentage);
         GpuTemperatureText = FormatTemperature(snapshot.GpuTemperatureCelsius);
         CpuTemperatureText = FormatTemperature(snapshot.CpuTemperatureCelsius);
+        NetworkDownloadSpeedText = FormatNetworkSpeed(snapshot.NetworkDownloadMegabytesPerSecond);
+        NetworkUploadSpeedText = FormatNetworkSpeed(snapshot.NetworkUploadMegabytesPerSecond);
     }
 
     private static string FormatPercentage(int? value) =>
@@ -79,6 +95,11 @@ public sealed class PerformanceBarViewModel : INotifyPropertyChanged
         value is { } temperature
             ? temperature.ToString(CultureInfo.InvariantCulture) + "°"
             : "--°";
+
+    private static string FormatNetworkSpeed(double? value) =>
+        value is { } speed
+            ? speed.ToString("0.0", CultureInfo.InvariantCulture)
+            : "--";
 
     private void SetField(ref string field, string value, [CallerMemberName] string? propertyName = null)
     {

@@ -312,6 +312,8 @@ public sealed class StartupShellController : IDisposable
                 MemoryPercentage = snapshot.MemoryPercentage,
                 MemoryUsedGiB = snapshot.MemoryUsedGiB,
                 MemoryTotalGiB = snapshot.MemoryTotalGiB,
+                NetworkDownloadMegabytesPerSecond = snapshot.NetworkDownloadMegabytesPerSecond,
+                NetworkUploadMegabytesPerSecond = snapshot.NetworkUploadMegabytesPerSecond,
                 Timestamp = snapshot.Timestamp
             };
             _latestMetricsSnapshot = latest;

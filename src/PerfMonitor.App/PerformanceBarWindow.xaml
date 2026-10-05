@@ -29,7 +29,12 @@
             <Run Text="  ·  显存 " /><Run Text="{Binding GpuMemoryPercentageText, Mode=OneWay}" FontWeight="SemiBold" />
             <Run Text="  ·  GPU温度 " /><Run Text="{Binding GpuTemperatureText, Mode=OneWay}" FontWeight="SemiBold" />
             <Run Text="  ·  ACPI " /><Run Text="{Binding CpuTemperatureText, Mode=OneWay}" FontWeight="SemiBold" />
-            <Run Text="  ·  网络 " /><Run Text="--" FontWeight="SemiBold" />
+            <Run Text="  ·  网络 " />
+            <Run Text="↓ " Foreground="#FF73B7FF" />
+            <Run Text="{Binding NetworkDownloadSpeedText, Mode=OneWay}" FontWeight="SemiBold" />
+            <Run Text=" MB/s ↑ " Foreground="#FF73B7FF" />
+            <Run Text="{Binding NetworkUploadSpeedText, Mode=OneWay}" FontWeight="SemiBold" />
+            <Run Text=" MB/s" />
         </TextBlock>
     </Border>
 </Window>

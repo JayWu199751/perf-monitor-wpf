@@ -23,5 +23,6 @@
 - TDD 红测证据：慢通道实现前，定向 Controller 合同测试在 3 秒等待后因没有慢指标快照而失败（`OperationCanceledException`）；实现后该合同与其余 Core 合同通过。
 - GPU adapter 通过固定参数运行无控制台 `nvidia-smi`，超时/取消后终止进程树并回收输出；逐行选择第一条有效 CSV 记录。ACPI adapter 采用异步 WMI observer；查询超时 5 秒，取消后清理等待有界，未完成的 WMI 查询不会与后续查询重叠。详情见 [ADR 0004](../../../docs/adr/0004-gpu-acpi-slow-metrics.md)。
 - 本机 Windows 集成实测：`nvidia-smi` 返回 GPU 使用率 37%、显存占用率 45%、GPU 温度 80°；CPU ACPI 热区查询返回缺失，原因无法确定（可能为权限、固件未公布热区或无可读数据）。因此 ACPI 成功换算、多热区最大值、访问拒绝及 GPU 多卡、命令缺失/超时/取消路径不得视为已验证。
-- 复验步骤：在有多个 NVIDIA GPU 的 Windows 主机上检查多行 CSV 首条有效行；分别将 `nvidia-smi` 从 PATH 移除、提供非法输出或用可控长时间子进程模拟超时/取消，并确认进程退出且 CPU/内存/网络继续更新；在可访问 ACPI 热区的主机记录原始热区结果并确认最高有效值；另以非管理员与拒绝访问条件复验缺失态。真实 Debug WinExe 启动/关闭 smoke 在合并最新集成分支后执行。
-- `dotnet test PerfMonitor.sln --no-restore --verbosity minimal`：Core.Tests 34/34、Windows.Tests 4/4 通过。Debug solution build：0 警告、0 错误。此分支仍需合入最新集成 tip 后处理 network/CPU-group 共享合同并复验 Debug/Release。
+- 复验步骤：在有多个 NVIDIA GPU 的 Windows 主机上检查多行 CSV 首条有效行；分别将 `nvidia-smi` 从 PATH 移除、提供非法输出或用可控长时间子进程模拟超时/取消，并确认进程退出且 CPU/内存/网络继续更新；在可访问 ACPI 热区的主机记录原始热区结果并确认最高有效值；另以非管理员与拒绝访问条件复验缺失态。这些硬件/故障路径仍需按步骤复验。
+- 合入集成 tip `ce572af` 后，已复核 network/CPU-group 共享合同；Controller 合同验证慢通道更新保留当前双向网速，快通道更新保留已有 GPU 与温度。Debug WinExe 实际启动运行 8 秒以上，随后对该进程窗口发送 `WM_CLOSE`，进程以退出码 0 退出。
+- 最终复验：`dotnet test PerfMonitor.sln --no-restore --verbosity minimal`，Core.Tests 38/38、Windows.Tests 5/5 通过；Debug 和 Release solution build 均 0 警告、0 错误。
