@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 using PerfMonitor.Core.Settings;
@@ -394,5 +395,14 @@ public partial class SettingsWindow : Window
         return brush;
     }
 
-    private void CloseButton_OnClick(object sender, RoutedEventArgs e) => Close();
+    /// <summary>头部标题行即拖动把手；关闭按钮自身吃掉鼠标按下事件，不会误触发拖动。</summary>
+    private void HeaderMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton == MouseButton.Left)
+        {
+            DragMove();
+        }
+    }
+
+    private void CloseWindowButton_OnClick(object sender, RoutedEventArgs e) => Close();
 }
