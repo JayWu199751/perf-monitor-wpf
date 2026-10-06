@@ -1,4 +1,4 @@
-# 验收矩阵 A01–A48（工票 15；A47 为 ADR-0007 增补，A48 为工票 16 增补）
+# 验收矩阵 A01–A49（工票 15；A47 为 ADR-0007 增补，A48 为工票 16 增补，A49 为小窗视觉改版增补）
 
 状态：矩阵已建立（2026-10-05，工票 15）。每项逐条核实了自动化/集成证据与工票 Comments；**真实桌面/硬件人工验证均未执行**，相应项按规格要求标「未验证」并附复验步骤指针。本文不声称任何项已通过人工验收。
 
@@ -43,7 +43,7 @@
 | A21 | F07 | 向内拖离>8DIP解除；移动原生跟手、右键不误拖动，松手只结算一次 | A/M | 部分证实 | Core `PlacementRulesTests`（阈值解除、sticky 语义）；`StartupShellContractTests`「性能条左键请求原生整窗移动，右键只打开菜单」；工票 02：真实 WPF smoke 从透明角落注入左键拖动窗口随指针移动、右键弹菜单主窗矩形不变 | 真实鼠标手感与「只结算一次」。复验：工票 08 复验第 1 步 + 工票 01 托盘/菜单人工验收 |
 | A22 | F07 | 设置修改与500ms位置防抖交错保存最新真值；退出前flush；创建/恢复/同步moved不覆盖 | A | 已证实 | Core `PerformanceBarPlacementContractTests`「创建期临时位置不会覆盖待恢复位置」「原生拖动结束结算贴边并按防抖持久化最后位置」「防抖期间更改其他设置会合并最新位置且不再单独保存位置」「退出时立即写入防抖中的最后位置」「重复相同位置结算不重摆窗口也不重复保存」 | 无 |
 | A23 | F07 | 副屏负坐标、混合DPI换屏、拔屏、改变分辨率/工作区后小窗可见且贴边正确 | A/W/M | 部分证实 | Core `PlacementRulesTests`（负坐标中心解析/最近显示器/夹回/恢复重放）；`PerformanceBarPlacementContractTests`「工作区或分辨率变化后按新工作区重新落位」「目标显示器消失时夹回剩余显示器工作区并持久化」；Windows `WindowsDisplayEnvironmentSourceTests` 3 条真实枚举 | 真实多屏、混合 DPI、插拔。复验：工票 08 Comments「未能自动验证」第 2–3、5 步；混合 DPI 步骤详见工票 02「混合 DPI 复验步骤」 |
-| A24 | F08 | 顶/底水平任务栏行内，卡片中心决定落点、纵向居中；左右任务栏/无行回普通落点 | A/M | 部分证实 | Core `TaskbarRowRulesTests` 12 条（顶/底行派生、左右无行、行内垂直居中、行外回落）；`PerformanceBarPlacementContractTests`「拖入底部任务栏行松手后垂直居中到行且横向跟随拖动」「拖出任务栏行后回落普通贴边」 | 真实任务栏拖入。复验：工票 09 Comments「未能自动验证」第 1 步 |
+| A24 | F08 | 顶/底水平任务栏行内，卡片中心决定落点、纵向居中；左右任务栏/无行回普通落点 | A/M | 部分证实 | Core `TaskbarRowRulesTests` 19 条（顶/底行派生、左右无行、中心进入行带即落位、行内垂直居中、行外回落）；`PerformanceBarPlacementContractTests`「拖入底部任务栏行松手后垂直居中到行且横向跟随拖动」「拖出任务栏行后回落普通贴边」 | 真实任务栏拖入。复验：工票 09 Comments「未能自动验证」第 1 步 |
 | A25 | F08 | 行内居中默认关；开立即归中，拖动松手弹回；关原地不动，行外不影响 | A/M | 部分证实 | Core `PerformanceBarPlacementContractTests`「开启行内居中立即结算一次并弹回整行水平中心」「关闭行内居中原地不动保持松手位置」「行外开启行内居中不生效不重摆」；`TaskbarRowRulesTests`「行内居中开启时松手弹回整行水平中心」 | 真实菜单点击与持久化观察。复验：工票 09 复验第 2 步 |
 | A26 | F08 | 连续20次点任务栏应用图标切换，不能永久被盖；测根句柄/z序，报告恢复延迟分布 | W/M | 部分证实 | Windows `WindowsTaskbarVisibilityGuardTests`（枚举任务栏根窗口、`WindowFromPoint`+`GA_ROOT` 遮挡判据实现、`SetWindowPos(HWND_TOPMOST)` 恢复）；Core 守卫节奏合同 | 真实 20 次点击切换与恢复延迟分布。复验：工票 09 复验第 3 步，并记录恢复延迟分布 |
 | A27 | F08 | 若采用守卫：30ms快拍/300ms慢刷新、悬浮态不查遮挡、隐藏停止、explorer重启更新句柄 | A/M | 部分证实 | Core `PerformanceBarPlacementContractTests`「卡片驻留任务栏行内时运行可见性守卫并按慢周期刷新句柄」「悬浮态不运行任务栏遮挡守卫」「隐藏性能条后守卫停止」（节奏 30/300ms 可注入验证）；Windows `WindowsTaskbarVisibilityGuardTests`「重复慢刷新重新枚举句柄，explorer 重启后能恢复」（恢复路径） | 真实 explorer 重启观察。复验：工票 09 复验第 4 步 |
@@ -55,7 +55,7 @@
 | A33 | F10/F11 | 浅/深/system变化和DPI变化，托盘黑/白与尺寸正确；explorer重启后图标恢复 | W/M | 部分证实 | Windows `TrayIconCatalogTests` 3 条（明暗前缀、16×DPI 就近档位、主题翻转）；工票 11：NotifyIcon 内建 TaskbarCreated 重注册实现说明 | 真实主题切换、DPI 缩放档位观感、explorer 重启。复验：工票 11 复验第 2–4 步 |
 | A34 | F11 | 默认值与范围表一致；逐键补默认、指标深合并、controller独占位置、菜单独占两开关 | A | 已证实 | Core `StartupShellContractTests`「指标设置从单一持久化真值加载并在表单更改时深合并保存」「用户调整的不透明度按 0.05 步进并保留合法边界」「非法刷新间隔不会改变或持久化中央设置」；Windows `WindowsSettingsStoreTests`「设置文件写入 schemaVersion 并在重启后保留指标和外观」；菜单专属开关仅经 `SettingsPatch`（工票 09/11 实现与合同） | 无 |
 | A35 | F11 | 设置即时反馈与小窗同步；持久化失败不报已保存；损坏JSON备份恢复，原子写中断可恢复 | A/W | 部分证实 | Core「持久化失败时中央设置和性能条都保留上一个成功值」；自启失败不显示成功（`AutostartContractTests`「端口报告失败时不保存并抛出异常避免显示成功」）；Windows `WindowsSettingsStoreTests`「损坏或越界设置会备份原文件并恢复默认」、临时文件+替换原子写（工票 07 实现） | 「已保存」约两秒提示的 UI 观感、原子写中断点复现。复验：工票 07 复验第 2–3 步；中断复现为保存瞬间强杀进程后重启检查配置可读 |
-| A36 | F11 | 背景20/72/100%文字opacity不变；字号10–18；透明显示退出恢复既有背景值 | A/M | 部分证实 | Core `StartupShellContractTests`「透明显示往返保留背景不透明度值供退出时恢复」「用户调整的不透明度按 0.05 步进并保留合法边界」 | 真实视觉观感（背景 20/72/100% 对照、字号 10–18 逐档）。复验：工票 07 复验第 2、5 步 |
+| A36 | F11 | 背景20/96/100%文字opacity不变；字号10–18；透明显示退出恢复既有背景值 | A/M | 部分证实 | Core `StartupShellContractTests`「透明显示往返保留背景不透明度值供退出时恢复」「用户调整的不透明度按 0.05 步进并保留合法边界」；App `PerformanceBarViewModelSettingsTests`「透明显示隐藏装饰并保留卡片命中区」「默认背景不透明度为 0.96 且合法」 | 真实视觉观感（背景 20/96/100% 对照、字号 10–18 逐档）。复验：工票 07 复验第 2、5 步 |
 | A37 | F11 | 设置窗关闭→4分59秒重开取消回收，闲置5分钟释放并可重建；退出取消回收定时器 | A/M | 部分证实 | Core `SettingsIdleRecycleTimerTests` 5 条 + `StartupShellContractTests` 回收组 9 条（默认 5 分钟、重开取消、退出取消、可见不释放、重复关闭不重复排程） | 真实 5 分钟闲置回收与内存回落观察。复验：工票 12 复验第 1 步 |
 | A38 | F11 | 低高度屏可滚动访问行为组，宽裕工作区无不必要滚动；不采用固定880DIP真值 | A/M | 部分证实 | Core `SettingsWindowSizingRulesTests` 3 条（MaxHeight 跟随工作区、保底、非法回退） | 真实低高度屏滚动观感。复验：工票 12 复验第 5 步 |
 | A39 | F12 | Debug无UAC；Release确认/拒绝UAC、已尝试标志、token验证、实例握手，无循环双开 | A/W/M | 部分证实 | Core `StartupShellContractTests`「Debug 普通启动直接运行且不尝试提权」「Release 普通启动最多请求一次提权」「真实 elevated 令牌直接运行，不再次请求提权」；工票 03：`TokenElevation` 读取与单次 runas adapter、IPC nonce 一次性；docs/release.md 静态验证（asInvoker manifest） | 真实 UAC 批准/拒绝、runas 启动失败保留普通实例。复验：工票 03 Comments「未验证及复验步骤」段 |
@@ -68,13 +68,14 @@
 | A46 | F13 | 至少记录关键候选方案或优化前后Private Bytes；完整功能不缩水，CPU/拖动/启动体验同时报告 | M | 未验证 | 内存预算与口径见 `rewrite-wpf/memory-budget.md`、`docs/memory-benchmark.md`；不预填数字 | 全部实测与记录。复验：按 docs/memory-benchmark.md 记录每轮 Private Bytes/CPU/启动/拖动体验与功能矩阵 |
 | A47 | F01 | 悬浮条与设置窗从 Alt+Tab 与任务视图隐匿（ADR-0007）；任务栏无按钮维持不变 | W/M | 部分证实 | 运行时窗口样式实测（`.scratch/win_style_probe.py`）：修复前悬浮条 exstyle=`0x00080008` 无 `WS_EX_TOOLWINDOW` 且被 WPF 隐藏所有者持有（Alt+Tab 泄漏，用户截图 2026-10-05）；修复后 `0x00080088` 含 `WS_EX_TOOLWINDOW`；设置窗走同一 `NativeWindowStyles` 入口 | 真实桌面按 Alt+Tab 与 Win+Tab 人工确认无「性能小窗」「性能小窗 · 设置」条目；设置窗失焦后经托盘「设置」找回。最小复验：启动应用按 Alt+Tab/Win+Tab 观察；打开设置窗后切到桌面再按 Alt+Tab |
 | A48 | F10/F12 | 图标为描边圆角方框且线条加粗：明暗各 5 档（16/20/24/28/32）+ ICO 五尺寸（16/24/32/48/256）齐全，占位与旧版一致；16px 仍可分辨 | W/M | 部分证实 | 工票 16：`tools/gen-icon.py` 自报框描边 20px→25px @256（×1.25）、外接框 235×215 不变；逐像素核对（`.scratch/icon_probe*.py`）24/28/32 框内折线与框保持间隙未粘连；`dotnet build` 0 错 0 警、ICO 实读五尺寸；产品目录 11 个 PNG + 1 个 ICO 全部由母图 `tools/assets/icon-master.png` 生成 | 真机观感：托盘（各 DPI 档）、exe 资源管理器图标、安装器与开始菜单快捷方式图标均为新图形且清晰。复验：工票 16「未自动验证项」第 1–3 步 |
+| A49 | F06/F11 | 小窗视觉改版（基准 `docs/UI/preview.html`）：胶囊形、段图标、彩色读数（CPU/内存/GPU）与双向网络箭头色、段悬停高光、四周环绕投影、窗口含 16px 投影留白且命中区=卡片、默认不透明度 96%；字号/间距体系不变；显存读数保留（白色）；三档主题令牌齐备 | A/M | 部分证实 | App `PerformanceBarViewModelSettingsTests` 新增 5 条（深色令牌、亮色推导令牌、透明显示隐藏装饰并保留命中、图标尺寸派生、默认 0.96）；Core `PlacementRulesTests` 透明 insets 用例覆盖贴边补偿；构建 0 警 0 错 | 真机观感：胶囊圆角、图标清晰度、投影方向与强度、悬停高光、亮色主题对比度、贴边时投影裁切观感。复验：按 UI-PARAMETERS §4.2/§4.4 对照 preview.html 逐项目检 |
 
 ## 汇总统计（2026-10-05）
 
 | 状态 | 数量 | 编号 |
 | --- | --- | --- |
 | 已证实（A/W 全覆盖） | 7 | A04, A05, A10, A13, A14, A22, A34 |
-| 部分证实（A/W 有证据，M 层未验证） | 32 | A01, A02, A03, A06, A07, A09, A11, A12, A15, A20, A21, A23, A24, A25, A26, A27, A28, A29, A30, A31, A33, A35, A36, A37, A38, A39, A40, A41, A42, A45, A47, A48 |
+| 部分证实（A/W 有证据，M 层未验证） | 33 | A01, A02, A03, A06, A07, A09, A11, A12, A15, A20, A21, A23, A24, A25, A26, A27, A28, A29, A30, A31, A33, A35, A36, A37, A38, A39, A40, A41, A42, A45, A47, A48, A49 |
 | 未验证 | 9 | A08, A16, A17, A18, A19, A32, A43, A44, A46 |
 
 - 186 项自动化测试（Core 139 + Windows 47）全过、0 警告（docs/release.md，2026-10-05）。

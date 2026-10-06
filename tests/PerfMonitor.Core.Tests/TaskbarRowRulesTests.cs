@@ -125,6 +125,19 @@ public sealed class TaskbarRowRulesTests
         Assert.Equal(DockedEdges.Bottom, docked);
     }
 
+    [Fact(DisplayName = "行内松手位置横向超出行范围时夹入行内")]
+    public void Settling_x_beyond_the_row_range_is_clamped_into_it()
+    {
+        var frame = new PlacementRect(1800, 1050, 200, 40);
+
+        var (settled, docked, inRow) = TaskbarRowRules.SettleRowPlacement(
+            frame, BottomTaskbarDisplay, DockedEdges.Bottom, centerInRow: false);
+
+        Assert.True(inRow);
+        Assert.Equal(new PlacementRect(1720, 1040, 200, 40), settled);
+        Assert.Equal(DockedEdges.Bottom, docked);
+    }
+
     [Fact(DisplayName = "行内落点保留既有左右贴边掩码并叠加对应顶底贴边")]
     public void Row_settlement_keeps_existing_side_docks_and_adds_the_row_edge()
     {
@@ -150,30 +163,30 @@ public sealed class TaskbarRowRulesTests
         Assert.Equal(DockedEdges.Left, docked);
     }
 
-    [Fact(DisplayName = "中心途经行带但未满足对应贴边落点时不落位")]
-    public void Passing_through_the_row_band_without_the_matching_edge_does_not_settle_in_row()
+    [Fact(DisplayName = "中心进入行带即落位，无需先满足贴边前提")]
+    public void Center_inside_the_row_settles_without_a_prior_dock()
     {
         var frame = new PlacementRect(100, 1050, 200, 40);
 
         var (settled, docked, inRow) = TaskbarRowRules.SettleRowPlacement(
             frame, BottomTaskbarDisplay, DockedEdges.None, centerInRow: true);
 
-        Assert.False(inRow);
-        Assert.Equal(frame, settled);
+        Assert.True(inRow);
+        Assert.Equal(new PlacementRect(860, 1040, 200, 40), settled);
         Assert.Equal(DockedEdges.None, docked);
     }
 
-    [Fact(DisplayName = "顶行落位要求顶贴边前提，仅有对向贴边不满足")]
-    public void Top_row_settlement_requires_the_top_edge_not_the_opposite_edge()
+    [Fact(DisplayName = "顶行落位同样只按中心判定")]
+    public void Top_row_settlement_also_only_requires_the_center()
     {
         var frame = new PlacementRect(100, 20, 200, 40);
 
         var (settled, docked, inRow) = TaskbarRowRules.SettleRowPlacement(
-            frame, TopTaskbarDisplay, DockedEdges.Bottom, centerInRow: false);
+            frame, TopTaskbarDisplay, DockedEdges.None, centerInRow: false);
 
-        Assert.False(inRow);
-        Assert.Equal(frame, settled);
-        Assert.Equal(DockedEdges.Bottom, docked);
+        Assert.True(inRow);
+        Assert.Equal(new PlacementRect(100, 4, 200, 40), settled);
+        Assert.Equal(DockedEdges.None, docked);
     }
 
     [Theory(DisplayName = "行内判定按中心纵坐标左闭右开")]
@@ -271,15 +284,17 @@ public sealed class TaskbarRowRulesTests
         Assert.False(restored);
     }
 
-    [Fact(DisplayName = "贴边掩码不含顶底边时不恢复行内")]
-    public void Stored_mask_without_a_vertical_edge_fails_row_restoration()
+    [Fact(DisplayName = "行内标志置位即按当前行恢复，不要求贴边掩码含顶底边")]
+    public void Row_restoration_requires_only_the_stored_row_flag()
     {
         var stored = new WidgetPlacement { X = 100, Y = 300, Docked = DockedEdges.Left, InTaskbarRow = true };
 
         var restored = TaskbarRowRules.TryRestoreRowPlacement(
             stored, new PlacementRect(0, 0, 200, 40), BottomTaskbarDisplay, centerInRow: false,
-            out _, out _);
+            out var frame, out var docked);
 
-        Assert.False(restored);
+        Assert.True(restored);
+        Assert.Equal(new PlacementRect(100, 1040, 200, 40), frame);
+        Assert.Equal(DockedEdges.Left, docked);
     }
 }

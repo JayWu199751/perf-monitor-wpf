@@ -110,6 +110,12 @@ public interface IStartupShellHost
     /// <summary>性能条窗口框架读写端口；窗口重建后宿主必须返回新实例。</summary>
     IPerformanceBarPlacementPort? PerformanceBarPlacement => null;
 
+    /// <summary>
+    /// 性能条窗口框架内的透明留白（投影等装饰），物理像素；卡片可视矩形为框架按此内缩的结果。
+    /// 缺省零内缩。
+    /// </summary>
+    PlacementInsets PerformanceBarVisualInsets => PlacementInsets.Zero;
+
     /// <summary>任务栏可见性守卫端口；缺省表示宿主不提供守卫能力。</summary>
     ITaskbarVisibilityGuardPort? TaskbarVisibilityGuard => null;
 
@@ -210,6 +216,13 @@ public sealed class StartupShellController : IDisposable
         _settingsRecycleTimer = settingsIdleRecycleTimer ?? new SettingsIdleRecycleTimer();
         _settingsRecycleTimer.Elapsed += OnSettingsIdleRecycleElapsed;
         var loadedSettings = (_settingsStore?.Load() ?? PerformanceSettings.Default).Validate();
+        // 0.72 是视觉改版前的默认背景不透明度，且落在滑块 0.05 步进网格之外（只可能来自旧默认，
+        // 不可能是用户手动选择）：加载时一次性迁移到新默认 0.96，让存量安装拿到近实心的改版观感。
+        if (loadedSettings.Opacity == 0.72)
+        {
+            loadedSettings = loadedSettings with { Opacity = PerformanceSettings.Default.Opacity };
+        }
+
         Settings = (loadedSettings with
         {
             FastRefreshMilliseconds = fastRefreshMilliseconds ?? loadedSettings.FastRefreshMilliseconds,
@@ -694,7 +707,7 @@ public sealed class StartupShellController : IDisposable
             stored,
             frame with { X = 0, Y = 0 },
             displays,
-            PlacementInsets.Zero,
+            _host.PerformanceBarVisualInsets,
             Settings.CenterInTaskbarRow);
         port.SetFramePosition(restored.X, restored.Y);
         var placement = new WidgetPlacement
@@ -765,9 +778,9 @@ public sealed class StartupShellController : IDisposable
                 frame,
                 resolved,
                 LastPlacementSnapshot().Docked,
-                PlacementInsets.Zero);
-            // 行内落点：以结算前框架的中心与对应贴边落点判定（规格 F08）；
-            // 不满足前提时回落普通贴边结算结果。
+                _host.PerformanceBarVisualInsets);
+            // 行内落点：以结算前框架的中心（与卡片中心重合）是否位于行内判定；
+            // 中心不在行内时回落普通贴边结算结果。
             var (rowSettled, rowDocked, inRow) = TaskbarRowRules.SettleRowPlacement(
                 frame,
                 resolved,

@@ -61,10 +61,9 @@ public static class TaskbarRowRules
     }
 
     /// <summary>
-    /// 行内落位结算：以结算前框架（用户松手位置）的中心位于某行内（左闭右开）、
-    /// 且贴边结算已满足对应顶/底贴边落点为前提，垂直居中到该行；
+    /// 行内落位结算：松手时框架中心（与卡片中心重合）位于某行内（左闭右开）即垂直居中到该行；
     /// centerInRow 开启时再弹回整行水平中心。
-    /// 不满足前提时返回 (frame, settledDocked, false)，由调用方回落普通贴边结果。
+    /// 中心不在任何行内时返回 (frame, settledDocked, false)，由调用方回落普通贴边结果。
     /// </summary>
     public static (PlacementRect Frame, DockedEdges Docked, bool InRow) SettleRowPlacement(
         PlacementRect frame,
@@ -76,16 +75,17 @@ public static class TaskbarRowRules
         foreach (var row in rows)
         {
             var rect = row.Rect;
-            var rowEdge = row.Kind == TaskbarRowKind.Top ? DockedEdges.Top : DockedEdges.Bottom;
             var isInRow = frame.CenterX >= rect.X && frame.CenterX < rect.Right &&
                 frame.CenterY >= rect.Y && frame.CenterY < rect.Bottom;
-            // 规格 F08：行内垂直居中需同时满足中心在行内与对应顶/底贴边落点。
-            if (!isInRow || (settledDocked & rowEdge) == 0)
+            if (!isInRow)
             {
                 continue;
             }
 
-            var x = centerInRow ? rect.CenterX - frame.Width / 2 : frame.X;
+            // 横向夹入行范围（与恢复路径一致）：内容变宽后松手位置不得把卡片推出行外。
+            var x = centerInRow
+                ? rect.CenterX - frame.Width / 2
+                : Math.Max(rect.X, Math.Min(frame.X, Math.Max(rect.X, rect.Right - frame.Width)));
             var y = rect.Y + (rect.Height - frame.Height) / 2;
             return (frame with { X = x, Y = y }, settledDocked, true);
         }
@@ -94,10 +94,9 @@ public static class TaskbarRowRules
     }
 
     /// <summary>
-    /// 行内恢复：按当前任务栏几何重新落位，前提是存储贴边掩码含对应顶/底边。
+    /// 行内恢复：按当前任务栏几何重新落位（存储 InTaskbarRow 置位即可，不要求贴边掩码）。
     /// 行内居中开启时回到整行水平中心，否则保留存储水平位置并夹入行范围；
-    /// 垂直方向始终居中到行。无行或贴边掩码不含顶/底边时返回 false，
-    /// 由调用方回落普通贴边恢复。
+    /// 垂直方向始终居中到行。无行时返回 false，由调用方回落普通贴边恢复。
     /// </summary>
     public static bool TryRestoreRowPlacement(
         WidgetPlacement stored,
@@ -110,12 +109,6 @@ public static class TaskbarRowRules
         foreach (var row in DeriveRows(display))
         {
             var rect = row.Rect;
-            var rowEdge = row.Kind == TaskbarRowKind.Top ? DockedEdges.Top : DockedEdges.Bottom;
-            if ((stored.Docked & rowEdge) == 0)
-            {
-                continue;
-            }
-
             var x = centerInRow
                 ? rect.CenterX - frameSize.Width / 2
                 : Math.Max(rect.X, Math.Min(stored.X, Math.Max(rect.X, rect.Right - frameSize.Width)));

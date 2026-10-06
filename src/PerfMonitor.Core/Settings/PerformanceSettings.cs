@@ -62,7 +62,7 @@ public sealed record PerformanceSettings
 
     public bool TransparentDisplay { get; init; }
 
-    public double Opacity { get; init; } = 0.72;
+    public double Opacity { get; init; } = 0.96;
 
     public int FontSize { get; init; } = 12;
 
@@ -97,9 +97,9 @@ public sealed record PerformanceSettings
             throw new ArgumentOutOfRangeException(nameof(Opacity), "背景不透明度必须在 0.20 到 1.00 之间。");
         }
 
-        if (Opacity != 0.72 && Opacity != SnapOpacity(Opacity))
+        if (Opacity is not (0.72 or 0.96) && Opacity != SnapOpacity(Opacity))
         {
-            throw new ArgumentOutOfRangeException(nameof(Opacity), "背景不透明度必须按 0.05 步进；0.72 是保留的默认值。");
+            throw new ArgumentOutOfRangeException(nameof(Opacity), "背景不透明度必须按 0.05 步进；0.72 与 0.96 是保留的默认值。");
         }
 
         if (FontSize is < 10 or > 18)

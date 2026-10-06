@@ -5,6 +5,7 @@ using PerfMonitor.Core.Metrics;
 using PerfMonitor.Core.Settings;
 using System.Windows;
 using System.Windows.Media;
+using System.Windows.Media.Effects;
 using System.Windows.Threading;
 using Microsoft.Win32;
 using Brush = System.Windows.Media.Brush;
@@ -46,26 +47,34 @@ public sealed class PerformanceBarViewModel : INotifyPropertyChanged
     private bool _hasCpuTemperature;
     private bool _hasNetworkDownload;
     private bool _hasNetworkUpload;
-    private Brush _backgroundBrush = CreateBrush(Color.FromArgb(0xB8, 0x1D, 0x1D, 0x1F));
-    private Brush _foregroundBrush = CreateBrush(Color.FromRgb(0xF5, 0xF5, 0xF7));
-    private Brush _secondaryBrush = CreateBrush(Color.FromArgb(0xAD, 0xF5, 0xF5, 0xF7));
-    private Brush _labelBrush = CreateBrush(Color.FromArgb(0x80, 0xF5, 0xF5, 0xF7));
-    private Brush _missingBrush = CreateBrush(Color.FromArgb(0x52, 0xF5, 0xF5, 0xF7));
-    private Brush _accentBrush = CreateBrush(Color.FromRgb(0x0A, 0x84, 0xFF));
-    private Brush _borderBrush = CreateBrush(Color.FromArgb(0x24, 0xFF, 0xFF, 0xFF));
-    private Brush _dividerBrush = CreateBrush(Color.FromArgb(0x1F, 0xFF, 0xFF, 0xFF));
-    private Brush _cpuPercentageBrush = CreateBrush(Color.FromArgb(0x52, 0xF5, 0xF5, 0xF7));
-    private Brush _memoryPercentageBrush = CreateBrush(Color.FromArgb(0x52, 0xF5, 0xF5, 0xF7));
-    private Brush _gpuPercentageBrush = CreateBrush(Color.FromArgb(0x52, 0xF5, 0xF5, 0xF7));
-    private Brush _gpuMemoryPercentageBrush = CreateBrush(Color.FromArgb(0x52, 0xF5, 0xF5, 0xF7));
-    private Brush _gpuTemperatureBrush = CreateBrush(Color.FromArgb(0x52, 0xF5, 0xF5, 0xF7));
-    private Brush _cpuTemperatureBrush = CreateBrush(Color.FromArgb(0x52, 0xF5, 0xF5, 0xF7));
-    private Brush _networkDownloadBrush = CreateBrush(Color.FromArgb(0x52, 0xF5, 0xF5, 0xF7));
-    private Brush _networkUploadBrush = CreateBrush(Color.FromArgb(0x52, 0xF5, 0xF5, 0xF7));
-    private Brush _networkDownloadArrowBrush = CreateBrush(Color.FromArgb(0x52, 0xF5, 0xF5, 0xF7));
-    private Brush _networkUploadArrowBrush = CreateBrush(Color.FromArgb(0x52, 0xF5, 0xF5, 0xF7));
-    private Brush _networkDownloadUnitBrush = CreateBrush(Color.FromArgb(0x52, 0xF5, 0xF5, 0xF7));
-    private Brush _networkUploadUnitBrush = CreateBrush(Color.FromArgb(0x52, 0xF5, 0xF5, 0xF7));
+    // 视觉令牌取自 docs/UI/preview.html（深色为原值，亮色为推导值）；字号与间距体系维持原规格。
+    private Brush _backgroundBrush = CreateBrush(Color.FromArgb(0xF5, 0x12, 0x15, 0x19));
+    private Brush _foregroundBrush = CreateBrush(Color.FromRgb(0xF3, 0xF5, 0xF7));
+    private Brush _labelBrush = CreateBrush(Color.FromRgb(0x92, 0x97, 0x9F));
+    private Brush _iconBrush = CreateBrush(Color.FromRgb(0x9D, 0xA3, 0xAA));
+    private Brush _temperatureBrush = CreateBrush(Color.FromRgb(0x9D, 0xA2, 0xA9));
+    private Brush _missingBrush = CreateBrush(Color.FromArgb(0x52, 0xF3, 0xF5, 0xF7));
+    private Brush _borderBrush = CreateBrush(Color.FromArgb(0x1A, 0xFF, 0xFF, 0xFF));
+    private Brush _dividerBrush = CreateBrush(Color.FromArgb(0x21, 0xFF, 0xFF, 0xFF));
+    private Brush _hoverBrush = CreateBrush(Color.FromArgb(0x06, 0xFF, 0xFF, 0xFF));
+    private DropShadowEffect? _shadowEffect = CreateShadowEffect(0.32);
+    private Brush _cpuTokenBrush = CreateBrush(Color.FromRgb(0x74, 0xE2, 0x6E));
+    private Brush _memoryTokenBrush = CreateBrush(Color.FromRgb(0x4B, 0xAD, 0xFF));
+    private Brush _gpuTokenBrush = CreateBrush(Color.FromRgb(0x52, 0xD6, 0x85));
+    private Brush _downloadTokenBrush = CreateBrush(Color.FromRgb(0x27, 0xAA, 0xFF));
+    private Brush _uploadTokenBrush = CreateBrush(Color.FromRgb(0x49, 0xDC, 0x8B));
+    private Brush _cpuPercentageBrush = CreateBrush(Color.FromRgb(0x74, 0xE2, 0x6E));
+    private Brush _memoryPercentageBrush = CreateBrush(Color.FromRgb(0x4B, 0xAD, 0xFF));
+    private Brush _gpuPercentageBrush = CreateBrush(Color.FromRgb(0x52, 0xD6, 0x85));
+    private Brush _gpuMemoryPercentageBrush = CreateBrush(Color.FromRgb(0xF3, 0xF5, 0xF7));
+    private Brush _gpuTemperatureBrush = CreateBrush(Color.FromRgb(0x9D, 0xA2, 0xA9));
+    private Brush _cpuTemperatureBrush = CreateBrush(Color.FromRgb(0x9D, 0xA2, 0xA9));
+    private Brush _networkDownloadBrush = CreateBrush(Color.FromRgb(0xF3, 0xF5, 0xF7));
+    private Brush _networkUploadBrush = CreateBrush(Color.FromRgb(0xF3, 0xF5, 0xF7));
+    private Brush _networkDownloadArrowBrush = CreateBrush(Color.FromRgb(0x27, 0xAA, 0xFF));
+    private Brush _networkUploadArrowBrush = CreateBrush(Color.FromRgb(0x49, 0xDC, 0x8B));
+    private Brush _networkDownloadUnitBrush = CreateBrush(Color.FromRgb(0x92, 0x97, 0x9F));
+    private Brush _networkUploadUnitBrush = CreateBrush(Color.FromRgb(0x92, 0x97, 0x9F));
 
     public PerformanceBarViewModel()
     {
@@ -105,7 +114,11 @@ public sealed class PerformanceBarViewModel : INotifyPropertyChanged
 
     public double UnitFontSize => Math.Clamp(_settings.FontSize * 0.82, 8, 12);
 
-    public CornerRadius CornerRadius => new(_settings.FontSize * 0.8);
+    /// <summary>段图标边长；html 基准为 19px / 17px 主字号。</summary>
+    public double IconSize => Math.Round(_settings.FontSize * 1.12, 2);
+
+    /// <summary>图标与后续文字的间距（加在图标右侧）；比段内读数间距略宽，把图标分成独立的视觉单元。</summary>
+    public Thickness IconGap => new(0, 0, _settings.FontSize * 0.75, 0);
 
     public Thickness LabelGap => new(_settings.FontSize * 0.58, 0, 0, 0);
 
@@ -125,11 +138,22 @@ public sealed class PerformanceBarViewModel : INotifyPropertyChanged
 
     public Brush ForegroundBrush { get => _foregroundBrush; private set => SetField(ref _foregroundBrush, value); }
 
-    public Brush SecondaryBrush { get => _secondaryBrush; private set => SetField(ref _secondaryBrush, value); }
-
     public Brush LabelBrush { get => _labelBrush; private set => SetField(ref _labelBrush, value); }
 
+    public Brush IconBrush { get => _iconBrush; private set => SetField(ref _iconBrush, value); }
+
+    public Brush TemperatureBrush { get => _temperatureBrush; private set => SetField(ref _temperatureBrush, value); }
+
     public Brush MissingBrush { get => _missingBrush; private set => SetField(ref _missingBrush, value); }
+
+    public Brush BorderBrush { get => _borderBrush; private set => SetField(ref _borderBrush, value); }
+
+    public Brush DividerBrush { get => _dividerBrush; private set => SetField(ref _dividerBrush, value); }
+
+    public Brush HoverBrush { get => _hoverBrush; private set => SetField(ref _hoverBrush, value); }
+
+    /// <summary>四周环绕的卡片投影（高斯、偏下）；透明显示下返回 null 关闭。</summary>
+    public DropShadowEffect? ShadowEffect { get => _shadowEffect; private set => SetField(ref _shadowEffect, value); }
 
     public Brush CpuPercentageBrush { get => _cpuPercentageBrush; private set => SetField(ref _cpuPercentageBrush, value); }
 
@@ -154,10 +178,6 @@ public sealed class PerformanceBarViewModel : INotifyPropertyChanged
     public Brush NetworkDownloadUnitBrush { get => _networkDownloadUnitBrush; private set => SetField(ref _networkDownloadUnitBrush, value); }
 
     public Brush NetworkUploadUnitBrush { get => _networkUploadUnitBrush; private set => SetField(ref _networkUploadUnitBrush, value); }
-
-    public Brush BorderBrush { get => _borderBrush; private set => SetField(ref _borderBrush, value); }
-
-    public Brush DividerBrush { get => _dividerBrush; private set => SetField(ref _dividerBrush, value); }
 
     public string TimeText { get => _timeText; private set => SetField(ref _timeText, value); }
 
@@ -261,7 +281,8 @@ public sealed class PerformanceBarViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(FontSize));
         OnPropertyChanged(nameof(LabelFontSize));
         OnPropertyChanged(nameof(UnitFontSize));
-        OnPropertyChanged(nameof(CornerRadius));
+        OnPropertyChanged(nameof(IconSize));
+        OnPropertyChanged(nameof(IconGap));
         OnPropertyChanged(nameof(LabelGap));
         OnPropertyChanged(nameof(ReadingGap));
         OnPropertyChanged(nameof(DividerGap));
@@ -308,48 +329,51 @@ public sealed class PerformanceBarViewModel : INotifyPropertyChanged
     private void UpdateThemeBrushes()
     {
         var dark = IsDarkEffectiveTheme(_settings.Theme);
+        var hide = _settings.TransparentDisplay;
         var background = dark
-            ? Color.FromRgb(0x1D, 0x1D, 0x1F)
-            : Color.FromRgb(0xFA, 0xFA, 0xFC);
-        var alpha = _settings.TransparentDisplay ? (byte)0 : (byte)Math.Round(_settings.Opacity * byte.MaxValue);
-        BackgroundBrush = CreateBrush(Color.FromArgb(alpha, background.R, background.G, background.B));
-        ForegroundBrush = CreateBrush(dark ? Color.FromRgb(0xF5, 0xF5, 0xF7) : Color.FromRgb(0x1D, 0x1D, 0x1F));
-        SecondaryBrush = CreateBrush(dark
-            ? Color.FromArgb(0xAD, 0xF5, 0xF5, 0xF7)
-            : Color.FromArgb(0xA8, 0x1D, 0x1D, 0x1F));
-        LabelBrush = CreateBrush(dark
-            ? Color.FromArgb(0x80, 0xF5, 0xF5, 0xF7)
-            : Color.FromArgb(0x9E, 0x1D, 0x1D, 0x1F));
-        MissingBrush = CreateBrush(dark
-            ? Color.FromArgb(0x52, 0xF5, 0xF5, 0xF7)
-            : Color.FromArgb(0x4D, 0x1D, 0x1D, 0x1F));
-        _accentBrush = CreateBrush(dark ? Color.FromRgb(0x0A, 0x84, 0xFF) : Color.FromRgb(0x00, 0x71, 0xE3));
-        BorderBrush = CreateBrush(Color.FromArgb(
-            _settings.TransparentDisplay ? (byte)0 : dark ? (byte)0x24 : (byte)0x1F,
-            dark ? (byte)0xFF : (byte)0x00,
-            dark ? (byte)0xFF : (byte)0x00,
-            dark ? (byte)0xFF : (byte)0x00));
-        var divider = dark
-            ? Color.FromArgb(0x1F, 0xFF, 0xFF, 0xFF)
-            : Color.FromArgb(0x1A, 0x00, 0x00, 0x00);
-        DividerBrush = CreateBrush(_settings.TransparentDisplay ? Color.FromArgb(0, divider.R, divider.G, divider.B) : divider);
+            ? Color.FromRgb(0x12, 0x15, 0x19)
+            : Color.FromRgb(0xF6, 0xF7, 0xF9);
+        // 透明显示把背景降到 alpha=1 而不是 0：分层窗口中 alpha=0 像素被系统穿透，
+        // 命中区必须留在卡片本身；装饰（描边/分隔/hover/高光/投影）则全部归零隐藏。
+        var backgroundAlpha = hide ? (byte)1 : (byte)Math.Round(_settings.Opacity * byte.MaxValue);
+        BackgroundBrush = CreateBrush(Color.FromArgb(backgroundAlpha, background.R, background.G, background.B));
+
+        var foreground = dark ? Color.FromRgb(0xF3, 0xF5, 0xF7) : Color.FromRgb(0x1A, 0x1D, 0x22);
+        ForegroundBrush = CreateBrush(foreground);
+        MissingBrush = CreateBrush(Color.FromArgb(0x52, foreground.R, foreground.G, foreground.B));
+        LabelBrush = CreateBrush(dark ? Color.FromRgb(0x92, 0x97, 0x9F) : Color.FromRgb(0x5F, 0x65, 0x6D));
+        IconBrush = CreateBrush(dark ? Color.FromRgb(0x9D, 0xA3, 0xAA) : Color.FromRgb(0x61, 0x66, 0x6D));
+        TemperatureBrush = CreateBrush(dark ? Color.FromRgb(0x9D, 0xA2, 0xA9) : Color.FromRgb(0x6A, 0x6F, 0x76));
+        _cpuTokenBrush = CreateBrush(dark ? Color.FromRgb(0x74, 0xE2, 0x6E) : Color.FromRgb(0x2F, 0x9E, 0x44));
+        _memoryTokenBrush = CreateBrush(dark ? Color.FromRgb(0x4B, 0xAD, 0xFF) : Color.FromRgb(0x19, 0x71, 0xC2));
+        _gpuTokenBrush = CreateBrush(dark ? Color.FromRgb(0x52, 0xD6, 0x85) : Color.FromRgb(0x2B, 0x8A, 0x3E));
+        _downloadTokenBrush = CreateBrush(dark ? Color.FromRgb(0x27, 0xAA, 0xFF) : Color.FromRgb(0x1C, 0x7E, 0xD6));
+        _uploadTokenBrush = CreateBrush(dark ? Color.FromRgb(0x49, 0xDC, 0x8B) : Color.FromRgb(0x0C, 0xA6, 0x78));
+
+        BorderBrush = CreateBrush(WithHiddenAlpha(
+            dark ? Color.FromArgb(0x1A, 0xFF, 0xFF, 0xFF) : Color.FromArgb(0x1A, 0x00, 0x00, 0x00), hide));
+        DividerBrush = CreateBrush(WithHiddenAlpha(
+            dark ? Color.FromArgb(0x21, 0xFF, 0xFF, 0xFF) : Color.FromArgb(0x21, 0x00, 0x00, 0x00), hide));
+        HoverBrush = CreateBrush(WithHiddenAlpha(
+            dark ? Color.FromArgb(0x06, 0xFF, 0xFF, 0xFF) : Color.FromArgb(0x08, 0x00, 0x00, 0x00), hide));
+        ShadowEffect = CreateShadowEffect(dark ? 0.32 : 0.16, hide);
         UpdateReadingBrushes();
     }
 
     private void UpdateReadingBrushes()
     {
-        CpuPercentageBrush = _hasCpuPercentage ? ForegroundBrush : MissingBrush;
-        MemoryPercentageBrush = _hasMemoryPercentage ? ForegroundBrush : MissingBrush;
-        GpuPercentageBrush = _hasGpuPercentage ? ForegroundBrush : MissingBrush;
+        CpuPercentageBrush = _hasCpuPercentage ? _cpuTokenBrush : MissingBrush;
+        MemoryPercentageBrush = _hasMemoryPercentage ? _memoryTokenBrush : MissingBrush;
+        GpuPercentageBrush = _hasGpuPercentage ? _gpuTokenBrush : MissingBrush;
         GpuMemoryPercentageBrush = _hasGpuMemoryPercentage ? ForegroundBrush : MissingBrush;
-        GpuTemperatureBrush = _hasGpuTemperature ? SecondaryBrush : MissingBrush;
-        CpuTemperatureBrush = _hasCpuTemperature ? SecondaryBrush : MissingBrush;
+        GpuTemperatureBrush = _hasGpuTemperature ? TemperatureBrush : MissingBrush;
+        CpuTemperatureBrush = _hasCpuTemperature ? TemperatureBrush : MissingBrush;
         NetworkDownloadBrush = _hasNetworkDownload ? ForegroundBrush : MissingBrush;
         NetworkUploadBrush = _hasNetworkUpload ? ForegroundBrush : MissingBrush;
-        NetworkDownloadArrowBrush = _hasNetworkDownload ? _accentBrush : MissingBrush;
-        NetworkUploadArrowBrush = _hasNetworkUpload ? _accentBrush : MissingBrush;
-        NetworkDownloadUnitBrush = _hasNetworkDownload ? SecondaryBrush : MissingBrush;
-        NetworkUploadUnitBrush = _hasNetworkUpload ? SecondaryBrush : MissingBrush;
+        NetworkDownloadArrowBrush = _hasNetworkDownload ? _downloadTokenBrush : MissingBrush;
+        NetworkUploadArrowBrush = _hasNetworkUpload ? _uploadTokenBrush : MissingBrush;
+        NetworkDownloadUnitBrush = _hasNetworkDownload ? LabelBrush : MissingBrush;
+        NetworkUploadUnitBrush = _hasNetworkUpload ? LabelBrush : MissingBrush;
     }
 
     private void OnClockTick(object? sender, EventArgs e) => UpdateTime();
@@ -395,6 +419,31 @@ public sealed class PerformanceBarViewModel : INotifyPropertyChanged
         var brush = new SolidColorBrush(color);
         brush.Freeze();
         return brush;
+    }
+
+    /// <summary>装饰色在透明显示下降为 alpha=0；读数、标签等内容色不受影响。</summary>
+    private static Color WithHiddenAlpha(Color color, bool hide) =>
+        hide ? Color.FromArgb(0, color.R, color.G, color.B) : color;
+
+    /// <summary>四周环绕投影（html 的 box-shadow 语义）：高斯模糊四向扩散、偏下；
+    /// 可见范围约 3σ + 偏移 ≈ 15.5 DIP，必须完整落在 16 DIP 窗口留白内，超出会在窗口边缘被硬切。</summary>
+    private static DropShadowEffect? CreateShadowEffect(double opacity, bool hide = false)
+    {
+        if (hide)
+        {
+            return null;
+        }
+
+        var effect = new DropShadowEffect
+        {
+            BlurRadius = 9,
+            ShadowDepth = 2,
+            Direction = 270,
+            Color = Colors.Black,
+            Opacity = opacity
+        };
+        effect.Freeze();
+        return effect;
     }
 
     internal static bool IsDarkSystemTheme()

@@ -82,6 +82,19 @@ internal sealed class WpfStartupShellHost : IStartupShellHost, IDisposable
 
     public IPerformanceBarPlacementPort? PerformanceBarPlacement => _performanceBar;
 
+    /// <summary>
+    /// 投影留白换算成物理像素的内缩；WPF 为 PerMonitorV2，窗口移动后 DPI 变化会触发
+    /// 重新结算，跨 DPI 显示器的瞬时偏差会随之自愈。
+    /// </summary>
+    public PlacementInsets PerformanceBarVisualInsets
+    {
+        get
+        {
+            var inset = PerformanceBarWindow.ShadowInsetDips * PerformanceBarDpiScale();
+            return new PlacementInsets(inset, inset, inset, inset);
+        }
+    }
+
     public ITaskbarVisibilityGuardPort? TaskbarVisibilityGuard => _taskbarGuard ??= CreateTaskbarGuard();
 
     public IFullscreenWatcher? FullscreenWatcher => _fullscreenWatcher;

@@ -431,6 +431,17 @@ public sealed class StartupShellContractTests
         Assert.True(barMenu.IsChecked);
     }
 
+    [Fact(DisplayName = "旧默认背景不透明度 0.72 在加载时迁移为新默认 0.96")]
+    public void Legacy_default_opacity_0_72_migrates_to_the_new_default_on_load()
+    {
+        var store = new RecordingSettingsStore(PerformanceSettings.Default with { Opacity = 0.72 });
+        var host = new RecordingStartupShellHost(settingsStore: store);
+        var shell = new StartupShellController(host);
+        shell.Start();
+
+        Assert.Equal(0.96, shell.Settings.Opacity);
+    }
+
     [Fact(DisplayName = "透明显示往返保留背景不透明度值供退出时恢复")]
     public void Transparent_display_round_trip_keeps_the_opacity_value_for_restore()
     {
