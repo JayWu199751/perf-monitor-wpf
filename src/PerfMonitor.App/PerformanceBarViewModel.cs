@@ -51,21 +51,17 @@ public sealed class PerformanceBarViewModel : INotifyPropertyChanged
     private Brush _backgroundBrush = CreateBrush(Color.FromArgb(0xF5, 0x12, 0x15, 0x19));
     private Brush _foregroundBrush = CreateBrush(Color.FromRgb(0xF3, 0xF5, 0xF7));
     private Brush _labelBrush = CreateBrush(Color.FromRgb(0x92, 0x97, 0x9F));
-    private Brush _iconBrush = CreateBrush(Color.FromRgb(0x9D, 0xA3, 0xAA));
     private Brush _temperatureBrush = CreateBrush(Color.FromRgb(0x9D, 0xA2, 0xA9));
     private Brush _missingBrush = CreateBrush(Color.FromArgb(0x52, 0xF3, 0xF5, 0xF7));
     private Brush _borderBrush = CreateBrush(Color.FromArgb(0x1A, 0xFF, 0xFF, 0xFF));
     private Brush _dividerBrush = CreateBrush(Color.FromArgb(0x21, 0xFF, 0xFF, 0xFF));
     private Brush _hoverBrush = CreateBrush(Color.FromArgb(0x06, 0xFF, 0xFF, 0xFF));
     private DropShadowEffect? _shadowEffect = CreateShadowEffect(0.32);
-    private Brush _cpuTokenBrush = CreateBrush(Color.FromRgb(0x74, 0xE2, 0x6E));
-    private Brush _memoryTokenBrush = CreateBrush(Color.FromRgb(0x4B, 0xAD, 0xFF));
-    private Brush _gpuTokenBrush = CreateBrush(Color.FromRgb(0x52, 0xD6, 0x85));
     private Brush _downloadTokenBrush = CreateBrush(Color.FromRgb(0x27, 0xAA, 0xFF));
     private Brush _uploadTokenBrush = CreateBrush(Color.FromRgb(0x49, 0xDC, 0x8B));
-    private Brush _cpuPercentageBrush = CreateBrush(Color.FromRgb(0x74, 0xE2, 0x6E));
-    private Brush _memoryPercentageBrush = CreateBrush(Color.FromRgb(0x4B, 0xAD, 0xFF));
-    private Brush _gpuPercentageBrush = CreateBrush(Color.FromRgb(0x52, 0xD6, 0x85));
+    private Brush _cpuPercentageBrush = CreateBrush(Color.FromRgb(0xF3, 0xF5, 0xF7));
+    private Brush _memoryPercentageBrush = CreateBrush(Color.FromRgb(0xF3, 0xF5, 0xF7));
+    private Brush _gpuPercentageBrush = CreateBrush(Color.FromRgb(0xF3, 0xF5, 0xF7));
     private Brush _gpuMemoryPercentageBrush = CreateBrush(Color.FromRgb(0xF3, 0xF5, 0xF7));
     private Brush _gpuTemperatureBrush = CreateBrush(Color.FromRgb(0x9D, 0xA2, 0xA9));
     private Brush _cpuTemperatureBrush = CreateBrush(Color.FromRgb(0x9D, 0xA2, 0xA9));
@@ -100,16 +96,6 @@ public sealed class PerformanceBarViewModel : INotifyPropertyChanged
 
     public Visibility TimeVisibility { get => _timeVisibility; private set => SetField(ref _timeVisibility, value); }
 
-    public Visibility CpuIconVisibility => ToVisibility(_settings.Metrics.Cpu && _settings.MetricIcons.Cpu);
-
-    public Visibility MemoryIconVisibility => ToVisibility(_settings.Metrics.Memory && _settings.MetricIcons.Memory);
-
-    public Visibility GpuIconVisibility => ToVisibility(_settings.Metrics.Gpu && _settings.MetricIcons.Gpu);
-
-    public Visibility NetworkIconVisibility => ToVisibility(_settings.Metrics.Network && _settings.MetricIcons.Network);
-
-    public Visibility TimeIconVisibility => ToVisibility(_settings.Metrics.Time && _settings.MetricIcons.Time);
-
     public Visibility CpuDividerVisibility { get => _cpuDividerVisibility; private set => SetField(ref _cpuDividerVisibility, value); }
 
     public Visibility MemoryDividerVisibility { get => _memoryDividerVisibility; private set => SetField(ref _memoryDividerVisibility, value); }
@@ -123,12 +109,6 @@ public sealed class PerformanceBarViewModel : INotifyPropertyChanged
     public double LabelFontSize => Math.Clamp(_settings.FontSize * 0.82, 9, 12);
 
     public double UnitFontSize => Math.Clamp(_settings.FontSize * 0.82, 8, 12);
-
-    /// <summary>段图标边长；html 基准为 19px / 17px 主字号。</summary>
-    public double IconSize => Math.Round(_settings.FontSize * 1.12, 2);
-
-    /// <summary>图标与后续文字的间距（加在图标右侧）；比段内读数间距略宽，把图标分成独立的视觉单元。</summary>
-    public Thickness IconGap => new(0, 0, _settings.FontSize * 0.75, 0);
 
     public Thickness LabelGap => new(_settings.FontSize * 0.58, 0, 0, 0);
 
@@ -149,8 +129,6 @@ public sealed class PerformanceBarViewModel : INotifyPropertyChanged
     public Brush ForegroundBrush { get => _foregroundBrush; private set => SetField(ref _foregroundBrush, value); }
 
     public Brush LabelBrush { get => _labelBrush; private set => SetField(ref _labelBrush, value); }
-
-    public Brush IconBrush { get => _iconBrush; private set => SetField(ref _iconBrush, value); }
 
     public Brush TemperatureBrush { get => _temperatureBrush; private set => SetField(ref _temperatureBrush, value); }
 
@@ -287,17 +265,10 @@ public sealed class PerformanceBarViewModel : INotifyPropertyChanged
         settings.Validate();
         _settings = settings;
         UpdateSegmentVisibility();
-        OnPropertyChanged(nameof(CpuIconVisibility));
-        OnPropertyChanged(nameof(MemoryIconVisibility));
-        OnPropertyChanged(nameof(GpuIconVisibility));
-        OnPropertyChanged(nameof(NetworkIconVisibility));
-        OnPropertyChanged(nameof(TimeIconVisibility));
         UpdateThemeBrushes();
         OnPropertyChanged(nameof(FontSize));
         OnPropertyChanged(nameof(LabelFontSize));
         OnPropertyChanged(nameof(UnitFontSize));
-        OnPropertyChanged(nameof(IconSize));
-        OnPropertyChanged(nameof(IconGap));
         OnPropertyChanged(nameof(LabelGap));
         OnPropertyChanged(nameof(ReadingGap));
         OnPropertyChanged(nameof(DividerGap));
@@ -357,11 +328,7 @@ public sealed class PerformanceBarViewModel : INotifyPropertyChanged
         ForegroundBrush = CreateBrush(foreground);
         MissingBrush = CreateBrush(Color.FromArgb(0x52, foreground.R, foreground.G, foreground.B));
         LabelBrush = CreateBrush(dark ? Color.FromRgb(0x92, 0x97, 0x9F) : Color.FromRgb(0x5F, 0x65, 0x6D));
-        IconBrush = CreateBrush(dark ? Color.FromRgb(0x9D, 0xA3, 0xAA) : Color.FromRgb(0x61, 0x66, 0x6D));
         TemperatureBrush = CreateBrush(dark ? Color.FromRgb(0x9D, 0xA2, 0xA9) : Color.FromRgb(0x6A, 0x6F, 0x76));
-        _cpuTokenBrush = CreateBrush(dark ? Color.FromRgb(0x74, 0xE2, 0x6E) : Color.FromRgb(0x2F, 0x9E, 0x44));
-        _memoryTokenBrush = CreateBrush(dark ? Color.FromRgb(0x4B, 0xAD, 0xFF) : Color.FromRgb(0x19, 0x71, 0xC2));
-        _gpuTokenBrush = CreateBrush(dark ? Color.FromRgb(0x52, 0xD6, 0x85) : Color.FromRgb(0x2B, 0x8A, 0x3E));
         _downloadTokenBrush = CreateBrush(dark ? Color.FromRgb(0x27, 0xAA, 0xFF) : Color.FromRgb(0x1C, 0x7E, 0xD6));
         _uploadTokenBrush = CreateBrush(dark ? Color.FromRgb(0x49, 0xDC, 0x8B) : Color.FromRgb(0x0C, 0xA6, 0x78));
 
@@ -377,9 +344,9 @@ public sealed class PerformanceBarViewModel : INotifyPropertyChanged
 
     private void UpdateReadingBrushes()
     {
-        CpuPercentageBrush = _hasCpuPercentage ? _cpuTokenBrush : MissingBrush;
-        MemoryPercentageBrush = _hasMemoryPercentage ? _memoryTokenBrush : MissingBrush;
-        GpuPercentageBrush = _hasGpuPercentage ? _gpuTokenBrush : MissingBrush;
+        CpuPercentageBrush = _hasCpuPercentage ? ForegroundBrush : MissingBrush;
+        MemoryPercentageBrush = _hasMemoryPercentage ? ForegroundBrush : MissingBrush;
+        GpuPercentageBrush = _hasGpuPercentage ? ForegroundBrush : MissingBrush;
         GpuMemoryPercentageBrush = _hasGpuMemoryPercentage ? ForegroundBrush : MissingBrush;
         GpuTemperatureBrush = _hasGpuTemperature ? TemperatureBrush : MissingBrush;
         CpuTemperatureBrush = _hasCpuTemperature ? TemperatureBrush : MissingBrush;

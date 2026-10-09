@@ -13,6 +13,7 @@ publish/
 # 本地调试产物忽略；实施工票 .scratch/wpf-rewrite/ 按约定入库（见 docs/agents/issue-tracker.md）
 .scratch/*
 !.scratch/wpf-rewrite/
+!.scratch/remove-metric-icons/
 
 # 安装器编译产物
 installer/Output/

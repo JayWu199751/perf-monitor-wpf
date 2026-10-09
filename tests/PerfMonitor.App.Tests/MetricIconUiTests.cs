@@ -1,4 +1,3 @@
-using System.IO;
 using System.Runtime.ExceptionServices;
 using System.Windows;
 using System.Windows.Controls;
@@ -6,6 +5,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using System.Windows.Threading;
 using PerfMonitor.App;
+using PerfMonitor.Core.Metrics;
 using PerfMonitor.Core.Settings;
 
 namespace PerfMonitor.App.Tests;
@@ -14,119 +14,107 @@ public sealed class MetricIconUiTests
 {
     private static readonly string[] MetricNames = ["Cpu", "Memory", "Gpu", "Network", "Time"];
 
-    [Theory(DisplayName = "五个图标开关各自更新且关闭段后仍可操作，设置窗重建恢复偏好")]
-    [InlineData("Cpu")]
-    [InlineData("Memory")]
-    [InlineData("Gpu")]
-    [InlineData("Network")]
-    [InlineData("Time")]
-    public void Icon_switches_update_independently_and_survive_window_recreation(string metric) => RunOnSta(() =>
+    [Fact(DisplayName = "设置窗重开和重建均无图标设置，整段开关继续正常保存")]
+    public void Settings_windows_have_no_icon_controls_and_keep_metric_switches() => RunOnSta(() =>
     {
-        var current = PerformanceSettings.Default with
-        {
-            Metrics = new MetricVisibility { Cpu = false, Memory = false, Gpu = false, Network = false, Time = false }
-        };
-        var originalMetrics = current.Metrics;
+        var current = PerformanceSettings.Default;
         var saveCount = 0;
         PerformanceSettings Update(SettingsPatch patch)
         {
             saveCount++;
-            current = current.Apply(patch);
-            return current;
+            return current = current.Apply(patch);
         }
 
-        var window = new SettingsWindow(current, Update, recoveredInvalidSettings: false);
-        try
+        for (var instance = 0; instance < 2; instance++)
         {
-            var toggle = Assert.IsType<ToggleButton>(window.FindName(metric + "IconToggle"));
-            Assert.True(toggle.IsEnabled);
-            toggle.IsChecked = false;
-            Assert.Equal(1, saveCount);
-            Assert.Equal(originalMetrics, current.Metrics);
-        }
-        finally
-        {
-            window.Close();
-        }
-
-        var reopened = new SettingsWindow(current, Update, recoveredInvalidSettings: false);
-        try
-        {
-            foreach (var name in MetricNames)
+            var window = new SettingsWindow(current, Update, recoveredInvalidSettings: false)
             {
-                var toggle = Assert.IsType<ToggleButton>(reopened.FindName(name + "IconToggle"));
-                Assert.Equal(name != metric, toggle.IsChecked);
+                Left = -20000, Top = -20000
+            };
+            try
+            {
+                window.Show();
+                FlushLayout();
+                AssertNoIconSettings(window);
+                var cpu = Assert.IsType<ToggleButton>(window.FindName("CpuToggle"));
+                Assert.Equal(instance == 0, cpu.IsChecked);
+                if (instance == 0)
+                {
+                    cpu.IsChecked = false;
+                    Assert.False(current.Metrics.Cpu);
+                    window.Hide();
+                    window.Show();
+                    FlushLayout();
+                    AssertNoIconSettings(window);
+                    Assert.False(cpu.IsChecked);
+                }
+                Assert.Equal(1, saveCount);
             }
-            Assert.Equal(1, saveCount);
-        }
-        finally
-        {
-            reopened.Close();
-        }
-    });
-
-    [Fact(DisplayName = "图标保存失败时开关恢复原值并提示失败")]
-    public void Failed_icon_save_restores_the_control_and_shows_failure() => RunOnSta(() =>
-    {
-        var window = new SettingsWindow(PerformanceSettings.Default,
-            _ => throw new IOException("模拟文件写入失败"), recoveredInvalidSettings: false);
-        try
-        {
-            var toggle = Assert.IsType<ToggleButton>(window.FindName("CpuIconToggle"));
-            toggle.IsChecked = false;
-            Assert.True(toggle.IsChecked);
-            Assert.Equal("保存失败", Assert.IsType<TextBlock>(window.FindName("SaveStatusText")).Text);
-        }
-        finally
-        {
-            window.Close();
+            finally
+            {
+                window.Close();
+            }
         }
     });
 
-    [Theory(DisplayName = "实际 WPF 图标隐藏移除占位且保留文字，恢复自然宽并维持最小命中区")]
+    [Theory(DisplayName = "无图标性能条保留文字和网络箭头，无专属占位并维持自然宽及最小命中区")]
     [InlineData(10, BarTheme.Light)]
+    [InlineData(10, BarTheme.Dark)]
+    [InlineData(12, BarTheme.Light)]
     [InlineData(12, BarTheme.Dark)]
     [InlineData(18, BarTheme.Light)]
-    public void Real_bar_layout_removes_icon_space_and_restores_width(int fontSize, BarTheme theme) => RunOnSta(() =>
+    [InlineData(18, BarTheme.Dark)]
+    public void Real_bar_has_no_icons_and_retains_compact_text_layout(int fontSize, BarTheme theme) => RunOnSta(() =>
     {
         var vm = new PerformanceBarViewModel();
         var settings = PerformanceSettings.Default with { FontSize = fontSize, Theme = theme };
         vm.ApplySettings(settings);
-        // 创建真实 WPF 窗口，但放在屏幕之外，避免验证时覆盖用户桌面。
+        vm.SetMetricGeneration(1);
+        vm.Apply(new PerformanceMetricsSnapshot(
+            1, CpuPercentage: 9, MemoryPercentage: 51, MemoryUsedGiB: null, MemoryTotalGiB: null,
+            DateTimeOffset.UtcNow, GpuPercentage: 42, GpuMemoryPercentage: 77,
+            GpuTemperatureCelsius: 29, CpuTemperatureCelsius: 62,
+            NetworkDownloadMegabytesPerSecond: 1.23, NetworkUploadMegabytesPerSecond: 0.45));
+        // 在屏幕之外创建真实 WPF 窗口，验证布局但不覆盖用户桌面。
         var window = new PerformanceBarWindow(() => { }) { DataContext = vm, Left = -20000, Top = -20000 };
         try
         {
             window.Show();
             FlushLayout();
-            var fullWidth = window.Width;
             var content = Assert.IsAssignableFrom<FrameworkElement>(window.Content);
-            var icons = Descendants<System.Windows.Shapes.Path>(content).ToArray();
+            Assert.Empty(Descendants<System.Windows.Shapes.Path>(content));
             var texts = Descendants<TextBlock>(content).ToArray();
-            var originalText = texts.Select(text => text.Text).ToArray();
-            Assert.Equal(5, icons.Length);
-            Assert.All(icons, icon => Assert.Equal(Visibility.Visible, icon.Visibility));
-            // 使用实际测量值，包含当前显示器 DPI 下的布局取整及图标右边距。
-            var iconWidth = icons.Sum(icon => icon.DesiredSize.Width);
-
-            vm.ApplySettings(settings with
-            {
-                MetricIcons = new MetricIconVisibility { Cpu = false, Memory = false, Gpu = false, Network = false, Time = false }
-            });
-            window.RefreshNaturalWidth();
-            FlushLayout();
-
-            Assert.All(icons, icon => Assert.Equal(Visibility.Collapsed, icon.Visibility));
             Assert.All(texts, text => Assert.True(text.IsVisible));
-            // 时间读数继续正常走时，只比较其他读数与标签。
-            Assert.Equal(originalText[..^1], texts[..^1].Select(text => text.Text).ToArray());
+            Assert.Contains(texts, text => text.Text == vm.CpuPercentageText);
+            Assert.Contains(texts, text => text.Text == vm.GpuMemoryPercentageText);
+            Assert.Contains(texts, text => text.Text == vm.NetworkDownloadSpeedText);
+            // DesiredSize 包含边距，ActualWidth 只包含元素；允许 DPI 布局取整误差。
+            Assert.All(texts, text => Assert.InRange(
+                text.DesiredSize.Width - text.Margin.Left - text.Margin.Right - text.ActualWidth, -1, 1));
+            foreach (var label in new[] { "CPU", "内存", "GPU", "显存", "网络", "↓", "↑", "MB/s" })
+            {
+                Assert.Contains(texts, text => text.Text == label);
+            }
             Assert.Equal(vm.TimeText, texts[^1].Text);
-            Assert.InRange(fullWidth - window.Width, iconWidth - 1, iconWidth + 1);
 
-            vm.ApplySettings(settings);
+            var card = Assert.IsType<Border>(window.FindName("Card"));
+            var segments = Assert.IsType<StackPanel>(card.Child).Children.OfType<Border>()
+                .Where(border => border.Child is StackPanel).ToArray();
+            Assert.Equal(5, segments.Length);
+            foreach (var segment in segments)
+            {
+                var first = Assert.IsType<TextBlock>(Assert.IsType<StackPanel>(segment.Child).Children[0]);
+                Assert.Equal(new Thickness(0), first.Margin);
+            }
+            content.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
+            Assert.Equal(Math.Max(window.MinWidth, Math.Ceiling(content.DesiredSize.Width)), window.Width);
+            var fullWidth = window.Width;
+
+            vm.ApplySettings(settings with { TransparentDisplay = true });
             window.RefreshNaturalWidth();
             FlushLayout();
-            Assert.Equal(fullWidth, window.Width);
-            Assert.All(icons, icon => Assert.Equal(Visibility.Visible, icon.Visibility));
+            Assert.Empty(Descendants<System.Windows.Shapes.Path>(content));
+            Assert.All(texts, text => Assert.True(text.IsVisible));
 
             vm.ApplySettings(settings with
             {
@@ -135,6 +123,13 @@ public sealed class MetricIconUiTests
             window.RefreshNaturalWidth();
             FlushLayout();
             Assert.Equal(PerformanceBarWindow.CardMinWidthDips + 2 * PerformanceBarWindow.ShadowInsetDips, window.Width);
+            Assert.All(segments, segment => Assert.Equal(Visibility.Collapsed, segment.Visibility));
+
+            vm.ApplySettings(settings);
+            window.RefreshNaturalWidth();
+            FlushLayout();
+            Assert.Equal(fullWidth, window.Width);
+            Assert.Empty(Descendants<System.Windows.Shapes.Path>(content));
         }
         finally
         {
@@ -143,6 +138,15 @@ public sealed class MetricIconUiTests
         }
     });
 
+    private static void AssertNoIconSettings(SettingsWindow window)
+    {
+        foreach (var metric in MetricNames)
+        {
+            Assert.Null(window.FindName(metric + "IconToggle"));
+            Assert.IsType<ToggleButton>(window.FindName(metric + "Toggle"));
+        }
+        Assert.DoesNotContain(Descendants<TextBlock>(window), text => text.Text == "显示图标");
+    }
     private static IEnumerable<T> Descendants<T>(DependencyObject parent) where T : DependencyObject
     {
         for (var index = 0; index < VisualTreeHelper.GetChildrenCount(parent); index++)

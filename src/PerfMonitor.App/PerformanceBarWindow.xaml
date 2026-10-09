@@ -26,12 +26,6 @@
       摆放数学按"视觉矩形=窗口矩形内缩 16 DIP"补偿（IStartupShellHost.PerformanceBarVisualInsets）。
     -->
     <Window.Resources>
-        <Geometry x:Key="CpuIcon">M8,7 L16,7 A1,1 0 0 1 17,8 L17,16 A1,1 0 0 1 16,17 L8,17 A1,1 0 0 1 7,16 L7,8 A1,1 0 0 1 8,7 Z M9,1 L9,5 M15,1 L15,5 M9,19 L9,23 M15,19 L15,23 M1,9 L5,9 M1,15 L5,15 M19,9 L23,9 M19,15 L23,15 M9.5,9.5 L14.5,9.5 L14.5,14.5 L9.5,14.5 Z</Geometry>
-        <Geometry x:Key="MemoryIcon">M4,7 L20,7 A1,1 0 0 1 21,8 L21,16 A1,1 0 0 1 20,17 L4,17 A1,1 0 0 1 3,16 L3,8 A1,1 0 0 1 4,7 Z M6,10 L6,14 M9,10 L9,14 M12,10 L12,14 M15,10 L15,14 M18,10 L18,14 M6,17 L6,19 M10,17 L10,19 M14,17 L14,19 M18,17 L18,19</Geometry>
-        <Geometry x:Key="GpuIcon">M4,6 L20,6 A1,1 0 0 1 21,7 L21,17 A1,1 0 0 1 20,18 L4,18 A1,1 0 0 1 3,17 L3,7 A1,1 0 0 1 4,6 Z M7,12 A3,3 0 1 1 13,12 A3,3 0 1 1 7,12 M14,12 A2,2 0 1 1 18,12 A2,2 0 1 1 14,12 M21,9 L23,9 M21,15 L23,15</Geometry>
-        <Geometry x:Key="NetworkIcon">M3,12 A9,9 0 1 1 21,12 A9,9 0 1 1 3,12 M3,12 L21,12 M12,3 A15,15 0 0 1 12,21 M12,3 A15,15 0 0 0 12,21</Geometry>
-        <Geometry x:Key="ClockIcon">M3,12 A9,9 0 1 1 21,12 A9,9 0 1 1 3,12 M12,7 L12,12 L15,14</Geometry>
-
         <Style x:Key="SegmentBorderStyle" TargetType="Border">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="VerticalAlignment" Value="Stretch" />
@@ -40,16 +34,6 @@
                     <Setter Property="Background" Value="{Binding HoverBrush}" />
                 </Trigger>
             </Style.Triggers>
-        </Style>
-
-        <Style x:Key="SegmentIconStyle" TargetType="Path">
-            <Setter Property="Stroke" Value="{Binding IconBrush}" />
-            <Setter Property="StrokeThickness" Value="1.8" />
-            <Setter Property="Stretch" Value="Uniform" />
-            <Setter Property="Width" Value="{Binding IconSize}" />
-            <Setter Property="Height" Value="{Binding IconSize}" />
-            <Setter Property="Margin" Value="{Binding IconGap}" />
-            <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
 
         <Style x:Key="SegmentLabelStyle" TargetType="TextBlock">
@@ -80,8 +64,6 @@
                         TextOptions.TextFormattingMode="Display">
                     <Border Style="{StaticResource SegmentBorderStyle}" Visibility="{Binding CpuVisibility}">
                         <StackPanel Orientation="Horizontal">
-                            <Path Style="{StaticResource SegmentIconStyle}" Data="{StaticResource CpuIcon}"
-                                  Visibility="{Binding CpuIconVisibility}" />
                             <TextBlock Style="{StaticResource SegmentLabelStyle}" Text="CPU" />
                             <TextBlock Style="{StaticResource ReadingTextStyle}"
                                        Text="{Binding CpuPercentageText, Mode=OneWay}"
@@ -101,8 +83,6 @@
 
                     <Border Style="{StaticResource SegmentBorderStyle}" Visibility="{Binding MemoryVisibility}">
                         <StackPanel Orientation="Horizontal">
-                            <Path Style="{StaticResource SegmentIconStyle}" Data="{StaticResource MemoryIcon}"
-                                  Visibility="{Binding MemoryIconVisibility}" />
                             <TextBlock Style="{StaticResource SegmentLabelStyle}" Text="内存" />
                             <TextBlock Style="{StaticResource ReadingTextStyle}"
                                        Text="{Binding MemoryPercentageText, Mode=OneWay}"
@@ -115,8 +95,6 @@
 
                     <Border Style="{StaticResource SegmentBorderStyle}" Visibility="{Binding GpuVisibility}">
                         <StackPanel Orientation="Horizontal">
-                            <Path Style="{StaticResource SegmentIconStyle}" Data="{StaticResource GpuIcon}"
-                                  Visibility="{Binding GpuIconVisibility}" />
                             <TextBlock Style="{StaticResource SegmentLabelStyle}" Text="GPU" />
                             <TextBlock Style="{StaticResource ReadingTextStyle}"
                                        Text="{Binding GpuPercentageText, Mode=OneWay}"
@@ -141,8 +119,6 @@
 
                     <Border Style="{StaticResource SegmentBorderStyle}" Visibility="{Binding NetworkVisibility}">
                         <StackPanel Orientation="Horizontal">
-                            <Path Style="{StaticResource SegmentIconStyle}" Data="{StaticResource NetworkIcon}"
-                                  Visibility="{Binding NetworkIconVisibility}" />
                             <TextBlock Style="{StaticResource SegmentLabelStyle}" Text="网络" />
                             <TextBlock Text="↓"
                                        Foreground="{Binding NetworkDownloadArrowBrush}"
@@ -173,8 +149,6 @@
 
                     <Border Style="{StaticResource SegmentBorderStyle}" Visibility="{Binding TimeVisibility}">
                         <StackPanel Orientation="Horizontal">
-                            <Path Style="{StaticResource SegmentIconStyle}" Data="{StaticResource ClockIcon}"
-                                  Visibility="{Binding TimeIconVisibility}" />
                             <TextBlock Style="{StaticResource ReadingTextStyle}"
                                        Text="{Binding TimeText, Mode=OneWay}"
                                        Foreground="{Binding ForegroundBrush}" />

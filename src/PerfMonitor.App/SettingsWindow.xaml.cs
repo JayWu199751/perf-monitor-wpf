@@ -88,29 +88,6 @@ public partial class SettingsWindow : Window
         }
     }
 
-    private void IconChanged(object sender, RoutedEventArgs e)
-    {
-        if (_isSynchronizingControls || sender is not ToggleButton toggle || toggle.Tag is not string metric)
-        {
-            return;
-        }
-
-        var enabled = toggle.IsChecked == true;
-        var patch = metric switch
-        {
-            "Cpu" => new SettingsPatch { MetricIcons = new MetricIconsSettingsPatch { Cpu = enabled } },
-            "Memory" => new SettingsPatch { MetricIcons = new MetricIconsSettingsPatch { Memory = enabled } },
-            "Gpu" => new SettingsPatch { MetricIcons = new MetricIconsSettingsPatch { Gpu = enabled } },
-            "Network" => new SettingsPatch { MetricIcons = new MetricIconsSettingsPatch { Network = enabled } },
-            "Time" => new SettingsPatch { MetricIcons = new MetricIconsSettingsPatch { Time = enabled } },
-            _ => null
-        };
-        if (patch is not null)
-        {
-            Save(patch);
-        }
-    }
-
     private void BehaviorChanged(object sender, RoutedEventArgs e)
     {
         if (_isSynchronizingControls || sender is not ToggleButton toggle || toggle.Tag is not string behavior)
@@ -217,11 +194,6 @@ public partial class SettingsWindow : Window
         GpuToggle.IsChecked = settings.Metrics.Gpu;
         NetworkToggle.IsChecked = settings.Metrics.Network;
         TimeToggle.IsChecked = settings.Metrics.Time;
-        CpuIconToggle.IsChecked = settings.MetricIcons.Cpu;
-        MemoryIconToggle.IsChecked = settings.MetricIcons.Memory;
-        GpuIconToggle.IsChecked = settings.MetricIcons.Gpu;
-        NetworkIconToggle.IsChecked = settings.MetricIcons.Network;
-        TimeIconToggle.IsChecked = settings.MetricIcons.Time;
         AutostartToggle.IsChecked = settings.Autostart;
         FullscreenAutoHideToggle.IsChecked = settings.AutoHideOnFullscreen;
         FastRefreshComboBox.SelectedValue = settings.FastRefreshMilliseconds.ToString(CultureInfo.InvariantCulture);

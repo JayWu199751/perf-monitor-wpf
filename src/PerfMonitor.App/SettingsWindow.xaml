@@ -445,51 +445,6 @@
 
             <Border Style="{StaticResource GroupCardStyle}">
                 <StackPanel>
-                    <TextBlock Text="显示图标" Style="{StaticResource GroupTitleStyle}" />
-                    <Grid Style="{StaticResource SettingRowStyle}">
-                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="40" /></Grid.ColumnDefinitions>
-                        <TextBlock Text="CPU 图标" Style="{StaticResource SettingLabelStyle}" />
-                        <ToggleButton x:Name="CpuIconToggle" Grid.Column="1" Style="{StaticResource SettingsSwitchStyle}"
-                                      Tag="Cpu" Checked="IconChanged" Unchecked="IconChanged"
-                                      AutomationProperties.Name="CPU 图标" />
-                    </Grid>
-                    <Border Height="0.5" Background="{DynamicResource DividerBrush}" />
-                    <Grid Style="{StaticResource SettingRowStyle}">
-                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="40" /></Grid.ColumnDefinitions>
-                        <TextBlock Text="内存图标" Style="{StaticResource SettingLabelStyle}" />
-                        <ToggleButton x:Name="MemoryIconToggle" Grid.Column="1" Style="{StaticResource SettingsSwitchStyle}"
-                                      Tag="Memory" Checked="IconChanged" Unchecked="IconChanged"
-                                      AutomationProperties.Name="内存图标" />
-                    </Grid>
-                    <Border Height="0.5" Background="{DynamicResource DividerBrush}" />
-                    <Grid Style="{StaticResource SettingRowStyle}">
-                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="40" /></Grid.ColumnDefinitions>
-                        <TextBlock Text="GPU 图标" Style="{StaticResource SettingLabelStyle}" />
-                        <ToggleButton x:Name="GpuIconToggle" Grid.Column="1" Style="{StaticResource SettingsSwitchStyle}"
-                                      Tag="Gpu" Checked="IconChanged" Unchecked="IconChanged"
-                                      AutomationProperties.Name="GPU 图标" />
-                    </Grid>
-                    <Border Height="0.5" Background="{DynamicResource DividerBrush}" />
-                    <Grid Style="{StaticResource SettingRowStyle}">
-                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="40" /></Grid.ColumnDefinitions>
-                        <TextBlock Text="网络图标" Style="{StaticResource SettingLabelStyle}" />
-                        <ToggleButton x:Name="NetworkIconToggle" Grid.Column="1" Style="{StaticResource SettingsSwitchStyle}"
-                                      Tag="Network" Checked="IconChanged" Unchecked="IconChanged"
-                                      AutomationProperties.Name="网络图标" />
-                    </Grid>
-                    <Border Height="0.5" Background="{DynamicResource DividerBrush}" />
-                    <Grid Style="{StaticResource SettingRowStyle}">
-                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="40" /></Grid.ColumnDefinitions>
-                        <TextBlock Text="时间图标" Style="{StaticResource SettingLabelStyle}" />
-                        <ToggleButton x:Name="TimeIconToggle" Grid.Column="1" Style="{StaticResource SettingsSwitchStyle}"
-                                      Tag="Time" Checked="IconChanged" Unchecked="IconChanged"
-                                      AutomationProperties.Name="时间图标" />
-                    </Grid>
-                </StackPanel>
-            </Border>
-
-            <Border Style="{StaticResource GroupCardStyle}">
-                <StackPanel>
                     <TextBlock Text="刷新率" Style="{StaticResource GroupTitleStyle}" />
                     <Grid Style="{StaticResource SettingRowStyle}">
                         <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="120" /></Grid.ColumnDefinitions>

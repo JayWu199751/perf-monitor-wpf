@@ -48,27 +48,7 @@ public sealed class PerformanceBarViewModelSettingsTests
         }
     }
 
-    [Fact(DisplayName = "段图标尺寸按主字号的 1.12 倍派生")]
-    public void Icon_size_derives_from_font_size()
-    {
-        var vm = new PerformanceBarViewModel();
-        try
-        {
-            vm.ApplySettings(PerformanceSettings.Default with { FontSize = 10 });
-
-            Assert.Equal(11.2, vm.IconSize);
-            // 图标到标签的间距加在图标右侧，略宽于段内读数间距（0.5fs），把图标分成独立视觉单元。
-            Assert.Equal(0, vm.IconGap.Left);
-            Assert.Equal(7.5, vm.IconGap.Right);
-            Assert.Equal(5, vm.ReadingGap.Left);
-        }
-        finally
-        {
-            vm.Dispose();
-        }
-    }
-
-    [Fact(DisplayName = "深色主题读数按 html 令牌着色，缺失回落弱化色")]
+    [Fact(DisplayName = "深色主题主占用读数与时间同色，缺失回落弱化色")]
     public void Dark_theme_colors_readings_with_preview_tokens()
     {
         var vm = new PerformanceBarViewModel();
@@ -89,10 +69,22 @@ public sealed class PerformanceBarViewModelSettingsTests
                 1, CpuPercentage: 9, MemoryPercentage: 51, MemoryUsedGiB: null, MemoryTotalGiB: null,
                 DateTimeOffset.UtcNow));
 
-            Assert.Equal(Color.FromRgb(0x74, 0xE2, 0x6E), ((SolidColorBrush)vm.CpuPercentageBrush).Color);
-            Assert.Equal(Color.FromRgb(0x4B, 0xAD, 0xFF), ((SolidColorBrush)vm.MemoryPercentageBrush).Color);
+            Assert.Equal(Color.FromRgb(0xF3, 0xF5, 0xF7), ((SolidColorBrush)vm.ForegroundBrush).Color);
+            Assert.Equal(vm.ForegroundBrush, vm.CpuPercentageBrush);
+            Assert.Equal(vm.ForegroundBrush, vm.MemoryPercentageBrush);
             // GPU 读数未到达：缺失占位用弱化色，而非零值或主题色。
             Assert.Equal(vm.MissingBrush, vm.GpuPercentageBrush);
+
+            vm.Apply(new PerformanceMetricsSnapshot(
+                1, CpuPercentage: 9, MemoryPercentage: 51, MemoryUsedGiB: null, MemoryTotalGiB: null,
+                DateTimeOffset.UtcNow, GpuPercentage: 42));
+            Assert.Equal(vm.ForegroundBrush, vm.GpuPercentageBrush);
+
+            vm.ApplySettings(PerformanceSettings.Default with { Theme = BarTheme.Light });
+            Assert.Equal(Color.FromRgb(0x1A, 0x1D, 0x22), ((SolidColorBrush)vm.ForegroundBrush).Color);
+            Assert.Equal(vm.ForegroundBrush, vm.CpuPercentageBrush);
+            Assert.Equal(vm.ForegroundBrush, vm.MemoryPercentageBrush);
+            Assert.Equal(vm.ForegroundBrush, vm.GpuPercentageBrush);
         }
         finally
         {
@@ -100,7 +92,7 @@ public sealed class PerformanceBarViewModelSettingsTests
         }
     }
 
-    [Fact(DisplayName = "亮色主题使用推导令牌与加深彩色值")]
+    [Fact(DisplayName = "亮色主题主占用读数与时间同色，网络箭头保留彩色")]
     public void Light_theme_uses_derived_tokens()
     {
         var vm = new PerformanceBarViewModel();
@@ -114,9 +106,12 @@ public sealed class PerformanceBarViewModelSettingsTests
             vm.SetMetricGeneration(1);
             vm.Apply(new PerformanceMetricsSnapshot(
                 1, CpuPercentage: 9, MemoryPercentage: 51, MemoryUsedGiB: null, MemoryTotalGiB: null,
-                DateTimeOffset.UtcNow, NetworkUploadMegabytesPerSecond: 1.2));
+                DateTimeOffset.UtcNow, GpuPercentage: 42, NetworkUploadMegabytesPerSecond: 1.2));
 
-            Assert.Equal(Color.FromRgb(0x2F, 0x9E, 0x44), ((SolidColorBrush)vm.CpuPercentageBrush).Color);
+            Assert.Equal(Color.FromRgb(0x1A, 0x1D, 0x22), ((SolidColorBrush)vm.ForegroundBrush).Color);
+            Assert.Equal(vm.ForegroundBrush, vm.CpuPercentageBrush);
+            Assert.Equal(vm.ForegroundBrush, vm.MemoryPercentageBrush);
+            Assert.Equal(vm.ForegroundBrush, vm.GpuPercentageBrush);
             Assert.Equal(Color.FromRgb(0x0C, 0xA6, 0x78), ((SolidColorBrush)vm.NetworkUploadArrowBrush).Color);
         }
         finally

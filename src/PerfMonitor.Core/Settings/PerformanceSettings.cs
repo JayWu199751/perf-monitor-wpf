@@ -30,20 +30,6 @@ public sealed record MetricVisibility
     public bool Time { get; init; } = true;
 }
 
-/// <summary>指标图标的独立显示偏好，不改变整个段的显隐。</summary>
-public sealed record MetricIconVisibility
-{
-    public bool Cpu { get; init; } = true;
-
-    public bool Memory { get; init; } = true;
-
-    public bool Gpu { get; init; } = true;
-
-    public bool Network { get; init; } = true;
-
-    public bool Time { get; init; } = true;
-}
-
 public sealed record WidgetPlacement
 {
     public double X { get; init; } = 24;
@@ -63,8 +49,6 @@ public sealed record PerformanceSettings
     public int SchemaVersion { get; init; } = CurrentSchemaVersion;
 
     public MetricVisibility Metrics { get; init; } = new();
-
-    public MetricIconVisibility MetricIcons { get; init; } = new();
 
     public int FastRefreshMilliseconds { get; init; } = 1000;
 
@@ -96,7 +80,6 @@ public sealed record PerformanceSettings
         }
 
         ArgumentNullException.ThrowIfNull(Metrics);
-        ArgumentNullException.ThrowIfNull(MetricIcons);
         ArgumentNullException.ThrowIfNull(Widget);
 
         if (FastRefreshMilliseconds is not (1000 or 2000 or 5000))
@@ -141,7 +124,6 @@ public sealed record PerformanceSettings
     {
         ArgumentNullException.ThrowIfNull(patch);
         var metricsPatch = patch.Metrics;
-        var iconsPatch = patch.MetricIcons;
         var next = this with
         {
             Metrics = metricsPatch is null
@@ -153,16 +135,6 @@ public sealed record PerformanceSettings
                     Gpu = metricsPatch.Gpu ?? Metrics.Gpu,
                     Network = metricsPatch.Network ?? Metrics.Network,
                     Time = metricsPatch.Time ?? Metrics.Time
-                },
-            MetricIcons = iconsPatch is null
-                ? MetricIcons
-                : MetricIcons with
-                {
-                    Cpu = iconsPatch.Cpu ?? MetricIcons.Cpu,
-                    Memory = iconsPatch.Memory ?? MetricIcons.Memory,
-                    Gpu = iconsPatch.Gpu ?? MetricIcons.Gpu,
-                    Network = iconsPatch.Network ?? MetricIcons.Network,
-                    Time = iconsPatch.Time ?? MetricIcons.Time
                 },
             FastRefreshMilliseconds = patch.FastRefreshMilliseconds ?? FastRefreshMilliseconds,
             SlowRefreshMilliseconds = patch.SlowRefreshMilliseconds ?? SlowRefreshMilliseconds,
@@ -207,24 +179,9 @@ public sealed record MetricsSettingsPatch
     public bool? Time { get; init; }
 }
 
-public sealed record MetricIconsSettingsPatch
-{
-    public bool? Cpu { get; init; }
-
-    public bool? Memory { get; init; }
-
-    public bool? Gpu { get; init; }
-
-    public bool? Network { get; init; }
-
-    public bool? Time { get; init; }
-}
-
 public sealed record SettingsPatch
 {
     public MetricsSettingsPatch? Metrics { get; init; }
-
-    public MetricIconsSettingsPatch? MetricIcons { get; init; }
 
     public int? FastRefreshMilliseconds { get; init; }
 
