@@ -2,6 +2,8 @@
 
 适用于 Windows 11 的桌面性能悬浮条，使用 C# 和 WPF 构建。
 
+![性能条实际运行截图：CPU、内存、GPU、显存、网络上传下载速度及时间](docs/screenshots/performance-bar.png)
+
 ## 功能
 
 - 显示 CPU、内存、NVIDIA GPU、网络上传/下载速度及时间，可选择显示的指标。
