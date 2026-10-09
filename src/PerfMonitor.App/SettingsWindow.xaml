@@ -17,10 +17,11 @@
         Foreground="{DynamicResource PrimaryTextBrush}"
         UseLayoutRounding="True"
         SnapsToDevicePixels="True">
-    <!-- 压掉原生标题栏但保留标准窗口框架：DWM 阴影与 Win11 圆角随之保留；
-         右上角关闭按钮与拖动区由内容区自绘（亮暗跟随主题画刷）。 -->
+    <!-- 压掉原生标题栏并显式使用 12 DIP 外框圆角；关闭玻璃边框以使 CornerRadius 生效，
+         窗口区域同时裁切背景。关闭按钮与拖动区由内容区自绘（亮暗跟随主题画刷）。 -->
     <shell:WindowChrome.WindowChrome>
-        <WindowChrome CaptionHeight="0" UseAeroCaptionButtons="False" />
+        <WindowChrome CaptionHeight="0" UseAeroCaptionButtons="False"
+                      CornerRadius="12" GlassFrameThickness="0" />
     </shell:WindowChrome.WindowChrome>
     <Window.Resources>
         <SolidColorBrush x:Key="PageBackgroundBrush" Color="#FFF5F5F7" />
