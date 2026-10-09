@@ -123,7 +123,7 @@ public sealed class WindowsScheduledTaskAutostart : IAutostartPort
                 definitionPath,
                 BuildTaskXml(_executablePath!, CurrentUser()),
                 Encoding.Unicode);
-            RunSchtasks("create", "/f", "/xml", definitionPath, "/tn", _taskName);
+            RunSchtasks("/create", "/f", "/xml", definitionPath, "/tn", _taskName);
         }
         finally
         {
@@ -141,13 +141,13 @@ public sealed class WindowsScheduledTaskAutostart : IAutostartPort
             return AutostartRequestOutcome.Disabled;
         }
 
-        RunSchtasks("delete", "/f", "/tn", _taskName);
+        RunSchtasks("/delete", "/f", "/tn", _taskName);
         return TaskExists() ? AutostartRequestOutcome.Failed : AutostartRequestOutcome.Disabled;
     }
 
     private bool TaskExists()
     {
-        return RunSchtasks("query", "/tn", _taskName) == 0;
+        return RunSchtasks("/query", "/tn", _taskName) == 0;
     }
 
     private int RunSchtasks(params string[] arguments)

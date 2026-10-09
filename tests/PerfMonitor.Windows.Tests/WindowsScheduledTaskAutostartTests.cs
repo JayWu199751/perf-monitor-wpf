@@ -89,6 +89,66 @@ public sealed class WindowsScheduledTaskAutostartTests
         }
     }
 
+    [Fact(DisplayName = "自启开启与关闭向 schtasks 传递合法操作开关，并查询实际结果")]
+    public void Enable_and_disable_use_valid_schtasks_operation_switches()
+    {
+        // 模拟 schtasks 的命令行协议，无需管理员权限或改动系统任务。
+        var directory = Path.Combine(Path.GetTempPath(), "PerfMonitorWpf." + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        var scriptPath = Path.Combine(directory, "schtasks.cmd");
+        var statePath = Path.Combine(directory, "state.txt");
+        var logPath = Path.Combine(directory, "arguments.txt");
+        File.WriteAllText(statePath, "0");
+        File.WriteAllText(scriptPath, """
+            @echo off
+            echo %*>>"%~dp0arguments.txt"
+            if /i "%~1" == "/create" (
+              if not exist "%~4" exit /b 2
+              >"%~dp0state.txt" echo 1
+              exit /b 0
+            )
+            if /i "%~1" == "/delete" (
+              >"%~dp0state.txt" echo 0
+              exit /b 0
+            )
+            if /i "%~1" == "/query" (
+              set /p state=<"%~dp0state.txt"
+              goto query
+            )
+            exit /b 2
+            :query
+            if "%state%" == "1" exit /b 0
+            exit /b 1
+            """);
+        try
+        {
+            var autostart = new WindowsScheduledTaskAutostart(
+                taskName: "PerfMonitorWpf.CommandContractTest",
+                executablePath: Environment.ProcessPath,
+                schtasksPath: scriptPath);
+
+            Assert.Equal(AutostartRequestOutcome.Enabled, autostart.TrySetEnabled(true));
+            Assert.Equal(AutostartRequestOutcome.Disabled, autostart.TrySetEnabled(false));
+            Assert.Equal(AutostartRequestOutcome.Disabled, autostart.TrySetEnabled(false));
+            var arguments = File.ReadAllLines(logPath);
+            Assert.Equal(6, arguments.Length);
+            Assert.StartsWith("/create /f /xml ", arguments[0]);
+            Assert.EndsWith(" /tn PerfMonitorWpf.CommandContractTest", arguments[0]);
+            Assert.Equal("/query /tn PerfMonitorWpf.CommandContractTest", arguments[1]);
+            Assert.Equal("/query /tn PerfMonitorWpf.CommandContractTest", arguments[2]);
+            Assert.Equal("/delete /f /tn PerfMonitorWpf.CommandContractTest", arguments[3]);
+            Assert.Equal("/query /tn PerfMonitorWpf.CommandContractTest", arguments[4]);
+            Assert.Equal("/query /tn PerfMonitorWpf.CommandContractTest", arguments[5]);
+        }
+        finally
+        {
+            File.Delete(scriptPath);
+            File.Delete(statePath);
+            File.Delete(logPath);
+            Directory.Delete(directory);
+        }
+    }
+
     [Fact(DisplayName = "大输出量下子进程管道读取不死锁，按退出码判定结果")]
     public void Large_output_on_both_pipes_does_not_deadlock()
     {
