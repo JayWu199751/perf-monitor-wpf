@@ -4,11 +4,11 @@
 
 **Blocked by:** 01: 应用启动壳与托盘入口。
 
-**Status:** ready-for-human
+**Status:** resolved
 
 - [x] 窗口采用无标题栏的透明宿主，不产生任务栏按钮，并保持在其他普通窗口上方。
 - [x] 用户从可见内容或视觉透明角落拖动时，整窗通过 WPF `DragMove` 跟手移动；真实 WPF 窗口上的透明角落命中、拖动已烟测。
-- [ ] 窗口在目标 DPI 和混合 DPI 显示器上保持正确尺寸、命中区域与位置；当前仅在单屏 150% DPI 烟测，混合 DPI 切换待复验。
+- [x] 窗口在目标 DPI 和混合 DPI 显示器上保持正确尺寸、命中区域与位置；当前仅在单屏 150% DPI 烟测，混合 DPI 切换待复验。
 - [x] 性能条右键可打开基础菜单，不会启动拖动；真实 WPF 窗口的视觉透明角落右键能打开菜单。
 
 ## 混合 DPI 复验步骤
@@ -25,3 +25,9 @@
 - 2026-10-05：真实 WPF smoke（Windows 11 专业版 10.0.26300，.NET 10.0.12；当前仅 `DISPLAY1`，`GetDpiForWindow=144`，即 150%）。`GetWindowDpiAwarenessContext` 与 PerMonitorV2 context 比较为真；PerMonitorV2 线程上下文读得初始窗口物理矩形 455×57 px。窗口 HWND 的 `WS_EX_LAYERED` 与 `WS_EX_TOPMOST` 已置位；UI Automation 在 Shell taskbar 下未找到“性能小窗”按钮。
 - 2026-10-05：Alpha=0 的圆角像素实测 `WindowFromPoint` 会命中下层桌面窗口。将窗口背景设为 Alpha=1 后，同一视觉透明角落命中性能条 HWND；从该点注入左键拖动，窗口矩形随指针移动；从该点右键，菜单 popup HWND 出现在鼠标位置附近且主窗口矩形不变。Alpha=1 的依据是上述真实 HWND 命中与拖动观察；混合 DPI 尚未验证。
 - 自动化验证（合入事项 04 后复验）：`dotnet test tests/PerfMonitor.Core.Tests/PerfMonitor.Core.Tests.csproj --no-restore --verbosity minimal`（17 项通过）；首次 `dotnet build src/PerfMonitor.App/PerfMonitor.App.csproj --no-restore --verbosity minimal` 因新合入项目缺少 assets 文件未能启动构建，执行 `dotnet restore src/PerfMonitor.App/PerfMonitor.App.csproj --verbosity minimal` 后重跑 build 成功（0 警告、0 错误）。
+
+
+### 2026-10-10：用户人工验收通过
+
+- 用户明确确认‘除了内存我已全部验证通过’。本事项非内存验收已通过，状态更新为 `resolved`。
+- 证据为用户整体人工确认，详见 [验收记录](../acceptance-2026-10-10.md)；未补写逐项操作过程或测量数据。正文及旧 Comments 中‘待人工验收/未验证’等表述保留为历史情况，以本次确认更新当前结论。

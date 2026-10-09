@@ -275,7 +275,7 @@ public partial class SettingsWindow : Window
             try
             {
                 if (SharedNativeMethods.GetDpiForMonitor(
-                        monitor, SharedNativeMethods.DpiEffective, out var dpiX, out _)
+                        monitor, SharedNativeMethods.DpiEffective, out var dpiX, out _) == 0
                     && dpiX > 0)
                 {
                     dpiScale = dpiX / 96.0;

@@ -1,7 +1,7 @@
 # 移除性能条指标图标
 
-Status: ready-for-human
-Progress: implemented
+Status: resolved
+Progress: accepted
 
 ## 用户目标
 
@@ -52,3 +52,6 @@ Progress: implemented
 
 - 2026-10-09：用户回复「按你推荐的」，确认全部推荐范围；开始实施。
 - 2026-10-09：实现和相关自动化验证完成；231 项通过，1 项任务栏测试因浏览器窗口占据测试点而未满足桌面前置条件。Release 构建通过，真实桌面观感与落位待人工验收，详见验证记录。
+
+
+- 2026-10-10：用户明确确认除内存外全部验证通过，本功能人工验收完成；详见 [用户验收记录](../wpf-rewrite/acceptance-2026-10-10.md)。此前待验收说明为历史记录。

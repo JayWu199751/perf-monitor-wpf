@@ -4,7 +4,7 @@
 
 **Blocked by:** 11: 共享菜单、托盘主题与透明显示（图标资产与档位约定已落地）
 
-**Status:** ready-for-human
+**Status:** resolved
 
 - [x] 新增可复现的生成脚本 `tools/gen-icon.py`：母图 `tools/assets/icon-master.png`（256px 描边方框，黑色透明底）经圆盘膨胀加粗后，外接框缩放回原占位，输出 16/20/24/28/32 明暗托盘 PNG 与 16/24/32/48/256 五尺寸 ICO。
 - [x] 母图与产物分离，脚本幂等：重复运行得到同一结果，不会逐次累加加粗。
@@ -12,7 +12,7 @@
 - [x] 全部档位同步重绘：tray-light/tray-dark 的 16/20/24/28/32 与 `icon.ico` 五尺寸；明暗仅换单色（黑/白），几何完全一致。
 - [x] 清除三柱图形：删除 `rewrite-wpf/ui/index.html` 中唯一的三柱内联 favicon，换成描边方框 SVG（避免 favicon 404 回归）。
 - [x] 文档去三柱：`rewrite-wpf/spec.md`、`.scratch/wpf-rewrite/spec.md`、`rewrite-wpf/prompts/01-master.md`、`rewrite-wpf/ui/design.md`、`rewrite-wpf/ui/index.html` 改称「描边方框」；工票 11 按 append-only 约定追加勘误而非改写正文。
-- [ ] 真机人工复验：托盘（16px 各 DPI 档）、exe 资源管理器图标、安装器与开始菜单快捷方式图标均为新图形且清晰。
+- [x] 真机人工复验：托盘（16px 各 DPI 档）、exe 资源管理器图标、安装器与开始菜单快捷方式图标均为新图形且清晰。
 
 ## Comments
 
@@ -38,3 +38,9 @@
 1. 托盘：启动 Release，在 100%/125%/150%/175%/200% 缩放下看托盘图标是否为新的粗描边方框，且与主题联动黑/白。
 2. exe 图标：资源管理器中查看 `PerfMonitor.App.exe` 的图标（16/32/48/256 各档）已更新，非旧图缓存（必要时重建图标缓存）。
 3. 安装器：`installer/perfmonitor.iss` 取 `publish/fdd/Resources/icon.ico`，重新发布后确认安装向导与开始菜单快捷方式图标为新图形。
+
+
+### 2026-10-10：用户人工验收通过
+
+- 用户明确确认‘除了内存我已全部验证通过’。本事项非内存验收已通过，状态更新为 `resolved`。
+- 证据为用户整体人工确认，详见 [验收记录](../acceptance-2026-10-10.md)；未补写逐项操作过程或测量数据。正文及旧 Comments 中‘待人工验收/未验证’等表述保留为历史情况，以本次确认更新当前结论。

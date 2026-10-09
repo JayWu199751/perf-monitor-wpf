@@ -11,6 +11,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="PerfMonitor.Windows.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="System.Management" Version="10.0.12" />
   </ItemGroup>
 

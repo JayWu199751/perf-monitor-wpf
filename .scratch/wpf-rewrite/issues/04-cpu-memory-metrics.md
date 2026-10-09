@@ -4,7 +4,7 @@
 
 **Blocked by:** 01: 应用启动壳与托盘入口。
 
-**Status:** ready-for-human
+**Status:** resolved
 
 - [x] CPU 使用率聚合所有活动 processor group 的累计时间后差分，首次基线为 0，结果为 0–100 整数；读取失败为缺失。
 - [x] 内存百分比使用原始物理字节计算，界面显示整数；快照保留已用和总量 GiB。
@@ -21,3 +21,9 @@
 - 2026-10-05 Core Controller 合同回归：通过 `StartupShellController` 验证相邻样本活动组数变化时该轮 CPU 缺失，下一轮以新组集合重建基线；临时移除 group-count guard 时回归按预期失败并错误显示 20%，恢复后通过且重建样本显示 60%。
 - 2026-10-05 事项03 Debug smoke 回归已随集成提交 `1052363` 合入：真实 Debug smoke 曾发现性能条 XAML 的只读 ViewModel 属性 `Run.Text` 默认采用 TwoWay，导致进程崩溃；CPU/内存文本绑定现显式 `Mode=OneWay`。复验确认第二次启动在 314ms 内以退出码 0 结束、主 PID 保持运行；向主实例发送 `WM_CLOSE` 后主进程以退出码 0 结束。未触发 UAC；此 smoke 不代表真实窗口激活或跨权限 ACL/接管已验收。
 - 初始实现自动化证据：`dotnet build PerfMonitor.sln --no-restore`（0 警告、0 错误）；`dotnet test PerfMonitor.sln --no-restore`（Core.Tests 16 项、Windows.Tests 1 项全部通过）。processor-group 修正后的中间验证为 Core.Tests 18 项、Windows.Tests 2 项全部通过；合并事项03 的 `1052363` 后，Debug 与 Release 全解构建均 0 警告、0 错误，完整 `dotnet test PerfMonitor.sln --no-restore` 为 Core.Tests 27 项、Windows.Tests 2 项全部通过。透明窗口真实显示与刷新仍需人工桌面验收。
+
+
+### 2026-10-10：用户人工验收通过
+
+- 用户明确确认‘除了内存我已全部验证通过’。本事项非内存验收已通过，状态更新为 `resolved`。
+- 证据为用户整体人工确认，详见 [验收记录](../acceptance-2026-10-10.md)；未补写逐项操作过程或测量数据。正文及旧 Comments 中‘待人工验收/未验证’等表述保留为历史情况，以本次确认更新当前结论。

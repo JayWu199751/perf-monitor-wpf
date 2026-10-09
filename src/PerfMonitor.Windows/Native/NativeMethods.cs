@@ -79,7 +79,7 @@ public static class NativeMethods
     public static extern bool GetMonitorInfoW(nint monitor, ref MonitorInfoW info);
 
     [DllImport("shcore.dll")]
-    public static extern bool GetDpiForMonitor(
+    public static extern int GetDpiForMonitor(
         nint monitor,
         int dpiType,
         out uint dpiX,

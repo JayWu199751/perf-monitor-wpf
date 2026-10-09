@@ -85,12 +85,13 @@ public sealed class WindowsDisplayEnvironmentSource : IDisplayEnvironmentSource,
         DisplaysChanged?.Invoke(this, EventArgs.Empty);
     }
 
-    private static double GetDpiScale(nint monitor)
+    internal static double GetDpiScale(nint monitor)
     {
         try
         {
+            // 返回值是 HRESULT：S_OK 为 0，不能按 Win32 BOOL 判断。
             return SharedNativeMethods.GetDpiForMonitor(
-                monitor, SharedNativeMethods.DpiEffective, out var dpiX, out _) && dpiX > 0
+                monitor, SharedNativeMethods.DpiEffective, out var dpiX, out _) == 0 && dpiX > 0
                 ? dpiX / 96.0
                 : 1.0;
         }

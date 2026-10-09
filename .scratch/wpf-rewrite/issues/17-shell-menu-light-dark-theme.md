@@ -4,7 +4,7 @@
 
 **Blocked by:** 无（11 的共享菜单已落地）
 
-**Status:** ready-for-human
+**Status:** resolved
 
 决策记录（2026-10-07 与用户两轮烤问确认）：
 
@@ -43,3 +43,9 @@
 
 - 新增 `tests/PerfMonitor.App.Tests/ShellContextMenuThemeTests.cs`（5 例 STA）：暗色令牌、亮色令牌、样式/偏移挂载、前景引用随勾选态解析、Apply 幂等与翻转。全绿：Windows 46 / App 21 / Core 161（`WindowsScheduledTaskAutostartTests` 的 1 例失败为基线预存的环境性失败，已 stash 验证与本工票无关）。
 - 截图验收（`.scratch/ui-restyle/menu-{dark,light}{,.hover}.png`，脚本 `menu-capture.ps1` 经 settings.json `theme` 字段切态）：亮暗两套色板、圆角 10 无残角、行首对勾、未勾行标签色、hover 胶囊、分隔线、四周投影全部符合参数表；左上角四倍放大复核无系统层方角残留。
+
+
+### 2026-10-10：用户人工验收通过
+
+- 用户明确确认‘除了内存我已全部验证通过’。本事项非内存验收已通过，状态更新为 `resolved`。
+- 证据为用户整体人工确认，详见 [验收记录](../acceptance-2026-10-10.md)；未补写逐项操作过程或测量数据。正文及旧 Comments 中‘待人工验收/未验证’等表述保留为历史情况，以本次确认更新当前结论。
