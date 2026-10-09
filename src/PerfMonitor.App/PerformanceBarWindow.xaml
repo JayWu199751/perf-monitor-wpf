@@ -80,7 +80,8 @@
                         TextOptions.TextFormattingMode="Display">
                     <Border Style="{StaticResource SegmentBorderStyle}" Visibility="{Binding CpuVisibility}">
                         <StackPanel Orientation="Horizontal">
-                            <Path Style="{StaticResource SegmentIconStyle}" Data="{StaticResource CpuIcon}" />
+                            <Path Style="{StaticResource SegmentIconStyle}" Data="{StaticResource CpuIcon}"
+                                  Visibility="{Binding CpuIconVisibility}" />
                             <TextBlock Style="{StaticResource SegmentLabelStyle}" Text="CPU" />
                             <TextBlock Style="{StaticResource ReadingTextStyle}"
                                        Text="{Binding CpuPercentageText, Mode=OneWay}"
@@ -100,7 +101,8 @@
 
                     <Border Style="{StaticResource SegmentBorderStyle}" Visibility="{Binding MemoryVisibility}">
                         <StackPanel Orientation="Horizontal">
-                            <Path Style="{StaticResource SegmentIconStyle}" Data="{StaticResource MemoryIcon}" />
+                            <Path Style="{StaticResource SegmentIconStyle}" Data="{StaticResource MemoryIcon}"
+                                  Visibility="{Binding MemoryIconVisibility}" />
                             <TextBlock Style="{StaticResource SegmentLabelStyle}" Text="内存" />
                             <TextBlock Style="{StaticResource ReadingTextStyle}"
                                        Text="{Binding MemoryPercentageText, Mode=OneWay}"
@@ -113,7 +115,8 @@
 
                     <Border Style="{StaticResource SegmentBorderStyle}" Visibility="{Binding GpuVisibility}">
                         <StackPanel Orientation="Horizontal">
-                            <Path Style="{StaticResource SegmentIconStyle}" Data="{StaticResource GpuIcon}" />
+                            <Path Style="{StaticResource SegmentIconStyle}" Data="{StaticResource GpuIcon}"
+                                  Visibility="{Binding GpuIconVisibility}" />
                             <TextBlock Style="{StaticResource SegmentLabelStyle}" Text="GPU" />
                             <TextBlock Style="{StaticResource ReadingTextStyle}"
                                        Text="{Binding GpuPercentageText, Mode=OneWay}"
@@ -138,7 +141,8 @@
 
                     <Border Style="{StaticResource SegmentBorderStyle}" Visibility="{Binding NetworkVisibility}">
                         <StackPanel Orientation="Horizontal">
-                            <Path Style="{StaticResource SegmentIconStyle}" Data="{StaticResource NetworkIcon}" />
+                            <Path Style="{StaticResource SegmentIconStyle}" Data="{StaticResource NetworkIcon}"
+                                  Visibility="{Binding NetworkIconVisibility}" />
                             <TextBlock Style="{StaticResource SegmentLabelStyle}" Text="网络" />
                             <TextBlock Text="↓"
                                        Foreground="{Binding NetworkDownloadArrowBrush}"
@@ -169,7 +173,8 @@
 
                     <Border Style="{StaticResource SegmentBorderStyle}" Visibility="{Binding TimeVisibility}">
                         <StackPanel Orientation="Horizontal">
-                            <Path Style="{StaticResource SegmentIconStyle}" Data="{StaticResource ClockIcon}" />
+                            <Path Style="{StaticResource SegmentIconStyle}" Data="{StaticResource ClockIcon}"
+                                  Visibility="{Binding TimeIconVisibility}" />
                             <TextBlock Style="{StaticResource ReadingTextStyle}"
                                        Text="{Binding TimeText, Mode=OneWay}"
                                        Foreground="{Binding ForegroundBrush}" />

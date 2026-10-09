@@ -23,6 +23,7 @@ internal sealed class WpfStartupShellHost : IStartupShellHost, IDisposable
 {
     private readonly WpfApplication _application;
     private readonly WpfContextMenu _sharedContextMenu = new();
+    private readonly ShellContextMenuTheme _shellContextMenuTheme;
     private readonly PerformanceBarViewModel _performanceBarViewModel = new();
     private readonly WindowsSystemMetricsSource _systemMetricsSource = new();
     private readonly WindowsSlowMetricsSource _slowMetricsSource = new();
@@ -46,7 +47,8 @@ internal sealed class WpfStartupShellHost : IStartupShellHost, IDisposable
     {
         _application = application;
         _settingsStore = settingsStore;
-        // 托盘图标跟随系统有效主题与显示设置变化；theme 固定时设置窗的主题变化经 ApplySettings 触发。
+        // 托盘图标与共享菜单跟随系统有效主题与显示设置变化；theme 固定时设置窗的主题变化经 ApplySettings 触发。
+        _shellContextMenuTheme = new ShellContextMenuTheme(_sharedContextMenu, IsDarkEffectiveTheme());
         SystemEvents.UserPreferenceChanged += OnSystemThemeOrDisplayChanged;
         SystemEvents.DisplaySettingsChanged += OnSystemThemeOrDisplayChanged;
     }
@@ -206,7 +208,7 @@ internal sealed class WpfStartupShellHost : IStartupShellHost, IDisposable
         _trayIcon.Show(IsDarkEffectiveTheme(), PerformanceBarDpiScale());
     }
 
-    /// <summary>主题或 DPI 变化时重选托盘图标资源；编组到 UI 线程执行。</summary>
+    /// <summary>主题或 DPI 变化时重选托盘图标资源并同步共享菜单亮暗；编组到 UI 线程执行。</summary>
     private void RefreshTrayIcon()
     {
         var dispatcher = _application.Dispatcher;
@@ -221,6 +223,7 @@ internal sealed class WpfStartupShellHost : IStartupShellHost, IDisposable
             if (!_disposed && _trayIcon is not null)
             {
                 _trayIcon.UpdateIcon(IsDarkEffectiveTheme(), PerformanceBarDpiScale());
+                _shellContextMenuTheme.Apply(IsDarkEffectiveTheme());
             }
         }));
     }
@@ -245,13 +248,19 @@ internal sealed class WpfStartupShellHost : IStartupShellHost, IDisposable
             return;
         }
 
+        // 兜底刷新：托盘图标刷新链路之外（如启动早期）系统主题变化后第一次弹出仍取到正确主题。
+        _shellContextMenuTheme.Apply(IsDarkEffectiveTheme());
+
         _sharedContextMenu.Items.Clear();
 
         foreach (var item in items)
         {
             if (item.Action == ShellMenuAction.Separator)
             {
-                _sharedContextMenu.Items.Add(new System.Windows.Controls.Separator());
+                var separator = new System.Windows.Controls.Separator();
+                separator.SetResourceReference(
+                    System.Windows.FrameworkElement.StyleProperty, ShellContextMenuTheme.SeparatorStyleKey);
+                _sharedContextMenu.Items.Add(separator);
                 continue;
             }
 
@@ -261,6 +270,7 @@ internal sealed class WpfStartupShellHost : IStartupShellHost, IDisposable
                 IsCheckable = item.IsCheckable,
                 IsChecked = item.IsChecked
             };
+            ShellContextMenuTheme.ApplyForeground(menuItem, item.IsCheckable, item.IsChecked);
             menuItem.Click += (_, _) => selectItem(item.Action);
             _sharedContextMenu.Items.Add(menuItem);
         }

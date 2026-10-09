@@ -14,6 +14,7 @@ public sealed class WindowsSettingsStoreTests
         var expected = PerformanceSettings.Default with
         {
             Metrics = PerformanceSettings.Default.Metrics with { Cpu = false, Time = false },
+            MetricIcons = new MetricIconVisibility { Cpu = false, Gpu = false, Time = false },
             FastRefreshMilliseconds = 5000,
             SlowRefreshMilliseconds = 5000,
             CenterInTaskbarRow = true,
@@ -45,6 +46,7 @@ public sealed class WindowsSettingsStoreTests
     }
 
     [Theory(DisplayName = "损坏或越界设置会备份原文件并恢复默认")]
+    [InlineData("{\"schemaVersion\":1,\"metricIcons\":null}")]
     [InlineData("{\"schemaVersion\":1,\"fastRefreshMilliseconds\":1500}")]
     [InlineData("{\"schemaVersion\":1,\"opacity\":0.83}")]
     public void Invalid_settings_are_preserved_as_a_backup_and_replaced_with_defaults(string invalidJson)
@@ -69,6 +71,26 @@ public sealed class WindowsSettingsStoreTests
         Assert.Equal("PerfMonitorWpf", Path.GetFileName(Path.GetDirectoryName(path)));
         Assert.Equal("settings.json", Path.GetFileName(path));
         Assert.StartsWith(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), path, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact(DisplayName = "旧配置缺少图标设置时默认全显示并保留原设置")]
+    public void Legacy_settings_default_to_visible_icons_without_losing_existing_settings()
+    {
+        using var directory = new TemporaryDirectory();
+        var path = Path.Combine(directory.Path, "settings.json");
+        const string original = "{\"schemaVersion\":1,\"metrics\":{\"cpu\":false,\"network\":false},\"fontSize\":16,\"theme\":\"dark\"}";
+        File.WriteAllText(path, original);
+        var store = new WindowsSettingsStore(path);
+
+        var loaded = store.Load();
+
+        Assert.Equal(new MetricIconVisibility(), loaded.MetricIcons);
+        Assert.False(loaded.Metrics.Cpu);
+        Assert.False(loaded.Metrics.Network);
+        Assert.Equal(16, loaded.FontSize);
+        Assert.Equal(BarTheme.Dark, loaded.Theme);
+        Assert.False(store.RecoveredInvalidSettingsOnLastLoad);
+        Assert.Equal(original, File.ReadAllText(path));
     }
 
     private sealed class TemporaryDirectory : IDisposable

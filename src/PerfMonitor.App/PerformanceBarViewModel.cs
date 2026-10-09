@@ -100,6 +100,16 @@ public sealed class PerformanceBarViewModel : INotifyPropertyChanged
 
     public Visibility TimeVisibility { get => _timeVisibility; private set => SetField(ref _timeVisibility, value); }
 
+    public Visibility CpuIconVisibility => ToVisibility(_settings.Metrics.Cpu && _settings.MetricIcons.Cpu);
+
+    public Visibility MemoryIconVisibility => ToVisibility(_settings.Metrics.Memory && _settings.MetricIcons.Memory);
+
+    public Visibility GpuIconVisibility => ToVisibility(_settings.Metrics.Gpu && _settings.MetricIcons.Gpu);
+
+    public Visibility NetworkIconVisibility => ToVisibility(_settings.Metrics.Network && _settings.MetricIcons.Network);
+
+    public Visibility TimeIconVisibility => ToVisibility(_settings.Metrics.Time && _settings.MetricIcons.Time);
+
     public Visibility CpuDividerVisibility { get => _cpuDividerVisibility; private set => SetField(ref _cpuDividerVisibility, value); }
 
     public Visibility MemoryDividerVisibility { get => _memoryDividerVisibility; private set => SetField(ref _memoryDividerVisibility, value); }
@@ -277,6 +287,11 @@ public sealed class PerformanceBarViewModel : INotifyPropertyChanged
         settings.Validate();
         _settings = settings;
         UpdateSegmentVisibility();
+        OnPropertyChanged(nameof(CpuIconVisibility));
+        OnPropertyChanged(nameof(MemoryIconVisibility));
+        OnPropertyChanged(nameof(GpuIconVisibility));
+        OnPropertyChanged(nameof(NetworkIconVisibility));
+        OnPropertyChanged(nameof(TimeIconVisibility));
         UpdateThemeBrushes();
         OnPropertyChanged(nameof(FontSize));
         OnPropertyChanged(nameof(LabelFontSize));

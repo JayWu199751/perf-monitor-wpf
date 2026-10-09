@@ -31,6 +31,7 @@ public sealed class StartupShellContractTests
         var initial = PerformanceSettings.Default with
         {
             Metrics = PerformanceSettings.Default.Metrics with { Memory = false },
+            MetricIcons = new MetricIconVisibility { Time = false },
             FontSize = 15
         };
         var store = new RecordingSettingsStore(initial);
@@ -43,6 +44,7 @@ public sealed class StartupShellContractTests
         var saved = host.UpdateSettings(new SettingsPatch
         {
             Metrics = new MetricsSettingsPatch { Cpu = false, Network = false },
+            MetricIcons = new MetricIconsSettingsPatch { Gpu = false },
             FastRefreshMilliseconds = 2000,
             Opacity = 0.83
         });
@@ -51,6 +53,9 @@ public sealed class StartupShellContractTests
         Assert.False(saved.Metrics.Network);
         Assert.False(saved.Metrics.Memory);
         Assert.True(saved.Metrics.Gpu);
+        Assert.False(saved.MetricIcons.Gpu);
+        Assert.False(saved.MetricIcons.Time);
+        Assert.True(saved.MetricIcons.Cpu);
         Assert.Equal(2000, saved.FastRefreshMilliseconds);
         Assert.Equal(15, saved.FontSize);
         Assert.Equal(0.85, saved.Opacity);
@@ -207,12 +212,38 @@ public sealed class StartupShellContractTests
 
         Assert.Throws<IOException>(() => shell.UpdateSettings(new SettingsPatch
         {
-            Metrics = new MetricsSettingsPatch { Cpu = false }
+            Metrics = new MetricsSettingsPatch { Cpu = false },
+            MetricIcons = new MetricIconsSettingsPatch { Cpu = false }
         }));
 
         Assert.Equal(PerformanceSettings.Default, shell.Settings);
         Assert.Single(host.AppliedSettings);
         Assert.Null(store.LastSaved);
+    }
+
+    [Fact(DisplayName = "性能条手动隐藏时仍可保存图标偏好且不改变隐藏状态")]
+    public void Icon_preferences_can_change_while_the_bar_remains_manually_hidden()
+    {
+        var store = new RecordingSettingsStore(PerformanceSettings.Default);
+        var host = new RecordingStartupShellHost(settingsStore: store);
+        using var shell = new StartupShellController(host);
+        shell.Start();
+        host.ClickTrayLeft();
+        Assert.False(shell.State.IsPerformanceBarVisible);
+
+        var saved = shell.UpdateSettings(new SettingsPatch
+        {
+            MetricIcons = new MetricIconsSettingsPatch { Cpu = false, Network = false }
+        });
+
+        Assert.False(shell.State.IsPerformanceBarVisible);
+        Assert.Equal(PerformanceSettings.Default.Metrics, saved.Metrics);
+        Assert.Equal(saved, store.LastSaved);
+        Assert.Equal(saved, host.AppliedSettings[^1]);
+        host.ClickTrayLeft();
+        Assert.True(shell.State.IsPerformanceBarVisible);
+        Assert.False(shell.Settings.MetricIcons.Cpu);
+        Assert.False(shell.Settings.MetricIcons.Network);
     }
 
     [Fact(DisplayName = "Debug 普通启动直接运行且不尝试提权")]

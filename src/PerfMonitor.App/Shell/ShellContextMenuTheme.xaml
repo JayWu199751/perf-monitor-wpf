@@ -1,0 +1,96 @@
+<ResourceDictionary x:Class="PerfMonitor.App.Shell.ShellContextMenuTheme"
+                    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- 托盘/性能条共享菜单的皮肤：令牌取自性能条 preview.html（暗为原值，亮为推导值），
+         几何对齐设置窗（容器圆角 10、项胶囊圆角 7）。默认画刷为暗色值，
+         运行时由 ShellContextMenuTheme.Apply(dark) 逐键覆盖，DynamicResource 引用即时跟随。 -->
+    <SolidColorBrush x:Key="ShellMenuBackgroundBrush" Color="#FF121519" />
+    <SolidColorBrush x:Key="ShellMenuForegroundBrush" Color="#FFF3F5F7" />
+    <SolidColorBrush x:Key="ShellMenuSecondaryBrush" Color="#FF92979F" />
+    <SolidColorBrush x:Key="ShellMenuCheckBrush" Color="#FFF3F5F7" />
+    <SolidColorBrush x:Key="ShellMenuHoverBrush" Color="#0FFFFFFF" />
+    <SolidColorBrush x:Key="ShellMenuBorderBrush" Color="#1AFFFFFF" />
+    <SolidColorBrush x:Key="ShellMenuDividerBrush" Color="#21FFFFFF" />
+    <DropShadowEffect x:Key="ShellMenuShadowEffect" Color="Black" BlurRadius="9" ShadowDepth="2" Direction="270" Opacity="0.32" />
+
+    <Style x:Key="ShellMenuRootStyle" TargetType="{x:Type ContextMenu}">
+        <Setter Property="FontFamily" Value="Segoe UI Variable Text, Segoe UI, Microsoft YaHei UI" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Foreground" Value="{DynamicResource ShellMenuForegroundBrush}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type ContextMenu}">
+                    <!-- 外围 16 DIP 透明留白容纳投影，背景留 null 让留白区穿透命中（同性能条 ShadowInset）。 -->
+                    <Grid Margin="16" Background="{x:Null}">
+                        <Border Background="{DynamicResource ShellMenuBackgroundBrush}"
+                                BorderBrush="{DynamicResource ShellMenuBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="10"
+                                Padding="6"
+                                Effect="{DynamicResource ShellMenuShadowEffect}">
+                            <ItemsPresenter />
+                        </Border>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="ShellMenuItemStyle" TargetType="{x:Type MenuItem}">
+        <Setter Property="Height" Value="32" />
+        <Setter Property="Margin" Value="4,0" />
+        <Setter Property="Foreground" Value="{DynamicResource ShellMenuForegroundBrush}" />
+        <Setter Property="SnapsToDevicePixels" Value="True" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type MenuItem}">
+                    <Border x:Name="ItemRoot"
+                            Background="Transparent"
+                            CornerRadius="7"
+                            Padding="8,0,12,0">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="16" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Path x:Name="CheckMark"
+                                  Data="M1,4.5 L4,7.5 L9,1.5"
+                                  Width="10" Height="9"
+                                  Stretch="None"
+                                  Stroke="{DynamicResource ShellMenuCheckBrush}"
+                                  StrokeThickness="1.8"
+                                  StrokeStartLineCap="Round"
+                                  StrokeEndLineCap="Round"
+                                  StrokeLineJoin="Round"
+                                  VerticalAlignment="Center"
+                                  Visibility="Collapsed" />
+                            <ContentPresenter Grid.Column="1"
+                                              ContentSource="Header"
+                                              Margin="8,0,0,0"
+                                              VerticalAlignment="Center"
+                                              RecognizesAccessKey="True" />
+                        </Grid>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsHighlighted" Value="True">
+                            <Setter TargetName="ItemRoot" Property="Background" Value="{DynamicResource ShellMenuHoverBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="CheckMark" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="ShellMenuSeparatorStyle" TargetType="{x:Type Separator}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type Separator}">
+                    <Border Height="1" Margin="8,5" Background="{DynamicResource ShellMenuDividerBrush}" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+</ResourceDictionary>
