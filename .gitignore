@@ -6,6 +6,7 @@
 
 # 本地发布产物（不入库，见 docs/release.md）
 publish/
+out/
 
 # 工作区本地数据与记忆（WorkBuddy）
 .workbuddy/

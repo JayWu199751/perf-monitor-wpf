@@ -7,8 +7,7 @@
 #define MyAppNameEn "PerfMonitorWpf"
 #define MyAppVersion "1.0.0"
 #define MyAppExeName "PerfMonitor.App.exe"
-#define PublishDir "C:\Users\10854\Code\PerfMonitor-WPF\publish\fdd"
-#define RepoDir "C:\Users\10854\Code\PerfMonitor-WPF"
+#define PublishDir "..\publish\fdd"
 
 [Setup]
 AppId={{8F4B2C1A-93D7-4E5A-B6C8-2A1D4E7F9C3B}
